@@ -189,6 +189,25 @@ footer {
   display: none !important;
 }
 
+/* RTL Text Support for Persian */
+.rtl-text {
+  direction: rtl;
+  text-align: right;
+  font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* User messages with RTL text should be aligned to the left instead of right */
+.user-message.rtl-text {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* Assistant messages with RTL text should be aligned to the right instead of left */
+.assistant-message.rtl-text {
+  margin-left: auto;
+  margin-right: 0;
+}
+
 /* Mobile responsive styles */
 @media (max-width: 576px) {
   .app-container {
@@ -381,6 +400,7 @@ footer {
   flex: 1;
   overflow-y: auto;
   padding: 1.5rem;
+  max-height: 70vh; /* Force scrollable area with fixed height */
   background-image: radial-gradient(
     circle at center,
     rgba(168, 85, 247, 0.05) 0%,
@@ -400,6 +420,7 @@ footer {
   background-image: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
   color: white;
   margin-left: auto;
+  margin-right: 0;
   padding: 0.6rem 0.85rem;
   min-height: unset;
   height: auto;
@@ -415,6 +436,7 @@ footer {
 .assistant-message {
   background-color: var(--bg-light);
   margin-right: auto;
+  margin-left: 0;
   line-height: 1.6;
   border: 1px solid rgba(168, 85, 247, 0.2);
   box-shadow: 0 0 15px rgba(168, 85, 247, 0.05);
@@ -1035,24 +1057,24 @@ footer {
 
 /* Go-to-top button styles */
 .go-to-top-button {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  width: 50px;
-  height: 50px;
-  background-image: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-  color: white;
-  border: none;
-  border-radius: 50%;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: all 0.3s ease;
-  z-index: 100;
-  opacity: 1;
-  transform: translateY(0);
+  position: fixed !important;
+  bottom: 30px !important;
+  right: 30px !important;
+  width: 50px !important;
+  height: 50px !important;
+  background-image: linear-gradient(135deg, var(--primary-color), var(--primary-dark)) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 50% !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  transition: all 0.3s ease !important;
+  z-index: 9999 !important;
+  opacity: 1 !important;
+  transform: translateY(0) !important;
 }
 
 .go-to-top-button:hover {
@@ -1061,13 +1083,61 @@ footer {
 }
 
 .go-to-top-button.hidden {
-  opacity: 0;
-  transform: translateY(30px);
-  pointer-events: none;
+  opacity: 0 !important;
+  transform: translateY(30px) !important;
+  pointer-events: none !important;
 }
 
 .go-to-top-button svg {
   width: 24px;
   height: 24px;
   stroke-width: 2.5;
+}
+
+/* Mobile-specific styles for the go-to-top button */
+.go-to-top-button.mobile {
+  width: 50px;
+  height: 50px;
+  bottom: 20px;
+  right: 20px;
+  background-image: linear-gradient(135deg, var(--primary-light), var(--primary-color));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.go-to-top-button.mobile svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.5;
+}
+
+/* Make button more touch-friendly on small screens */
+@media (max-width: 480px) {
+  .go-to-top-button.mobile {
+    width: 55px;
+    height: 55px;
+    bottom: 16px;
+    right: 16px;
+  }
+}
+
+/* Dashboard-specific styles for a smaller button */
+body.dashboard .go-to-top-button {
+  width: 40px;
+  height: 40px;
+}
+
+body.dashboard .go-to-top-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+body.dashboard .go-to-top-button.mobile {
+  width: 45px;
+  height: 45px;
+}
+
+body.dashboard .go-to-top-button.mobile svg {
+  width: 22px;
+  height: 22px;
 }

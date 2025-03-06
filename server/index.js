@@ -114,11 +114,16 @@ const puppeteer = require('puppeteer');
 // PDF Export endpoint
 app.post('/api/export-table', authenticateUser, async (req, res) => {
   try {
-    const { tableHtml, filename = 'table-export' } = req.body;
+    let { tableHtml, filename = 'table-export' } = req.body;
     
     if (!tableHtml) {
       return res.status(400).json({ error: 'Table HTML is required' });
     }
+    
+    // Generate a unique filename with timestamp and random string
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const randomString = Math.random().toString(36).substring(2, 8);
+    const uniqueFilename = `${filename}-${timestamp}-${randomString}`;
     
     // Create a complete HTML document with proper styling
     const htmlContent = `
@@ -143,22 +148,22 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
             padding: 20px;
           }
           
-          /* RTL and Persian text support */
-          :lang(fa), :lang(ar), [dir="rtl"],
-          *:not(table):not(th):not(tr):not(td) {
+          /* RTL and Persian text support - more compatible selectors */
+          :lang(fa), :lang(ar), [dir="rtl"] {
             font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           }
           
-          /* Detect Persian Unicode range and apply RTL styling */
-          *:has(> :is([\u0600-\u06FF])) {
+          /* Apply Vazir font and RTL for Persian content */
+          .rtl-text {
             direction: rtl;
             text-align: right;
             font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           }
           
-          /* Apply Vazir font to all text containing Persian characters */
-          *:contains([\u0600-\u06FF]) {
-            font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          /* Add a script to detect Persian text and apply RTL class */
+          body.rtl {
+            direction: rtl;
+            text-align: right;
           }
           
           table {
@@ -176,22 +181,17 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
             padding: 10px 12px;
           }
           
-          /* Apply RTL to table headers with Persian text */
-          th:has([\u0600-\u06FF]) {
-            text-align: right;
-            direction: rtl;
-          }
-          
           td {
             border: 1px solid #4a4a57;
             padding: 10px 12px;
             text-align: left;
           }
           
-          /* Apply RTL to table cells with Persian text */
-          td:has([\u0600-\u06FF]) {
+          /* Fallback to use JavaScript to apply RTL */
+          .rtl-cell {
             text-align: right;
             direction: rtl;
+            font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           }
           
           tr:nth-child(odd) {
@@ -223,17 +223,41 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
       // Set content and generate PDF
       await page.setContent(htmlContent);
       
-      // Wait for Vazir font to load properly before generating PDF
+      // Wait for Vazir font to load properly and apply RTL classes using JavaScript
       await page.evaluateHandle(() => {
         return new Promise((resolve) => {
+          // Apply RTL detection for Persian text
+          function detectPersianAndApplyRTL() {
+            // Detect Persian text in table cells and apply RTL
+            const persianRegex = /[\u0600-\u06FF]/;
+            
+            // Check if body contains Persian text
+            if (persianRegex.test(document.body.innerText)) {
+              document.body.classList.add('rtl');
+            }
+            
+            // Process table cells
+            const cells = document.querySelectorAll('th, td');
+            cells.forEach(cell => {
+              if (persianRegex.test(cell.innerText)) {
+                cell.classList.add('rtl-cell');
+              }
+            });
+          }
+          
+          // Wait for fonts to load first
           if (document.fonts && document.fonts.ready) {
             document.fonts.ready.then(() => {
-              // Add a small delay to ensure font rendering
-              setTimeout(resolve, 500);
+              detectPersianAndApplyRTL();
+              // Add a small delay to ensure font rendering and script execution
+              setTimeout(resolve, 800);
             });
           } else {
             // Fallback if document.fonts.ready is not available
-            setTimeout(resolve, 1000);
+            setTimeout(() => {
+              detectPersianAndApplyRTL();
+              resolve();
+            }, 1200);
           }
         });
       });
@@ -257,7 +281,15 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
       
       // Set appropriate headers for PDF download
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}.pdf"`);
+      
+      // Format Content-Disposition header according to RFC 6266 for better browser compatibility
+      // Both filename and filename* parameters are included for wider compatibility
+      const encodedFilename = encodeURIComponent(uniqueFilename);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${uniqueFilename}.pdf"; filename*=UTF-8''${encodedFilename}.pdf`
+      );
+      
       res.setHeader('Content-Length', pdfBuffer.length);
       
       // Send the PDF buffer directly without using express's res.send()
@@ -571,11 +603,21 @@ Your purpose is to help users analyze and understand documents.
 When working with document content:
 1. First extract and quote relevant information from the documents using <quotes> tags
 2. Then provide clear, detailed responses based solely on the document contents
-3. For diagrams or tables, describe what they show and explain key data points
+3. For diagrams or tables in the documents, describe what they show and explain key data points
 4. When referencing specific information, note the document and section
+5. When organizing information or answering requests for data structuring, feel free to create markdown tables to present information clearly
+
+Tables are supported in this interface. Use markdown table syntax when presenting tabular data:
+\`\`\`
+| Header 1 | Header 2 | Header 3 |
+|----------|----------|----------|
+| Data 1   | Data 2   | Data 3   |
+| More 1   | More 2   | More 3   |
+\`\`\`
 
 Guidelines:
-- Answer questions based ONLY on the content in the documents. If the information isn't in any document, clearly state this.
+- you are an multilingual assistant so answer and respond based on the user input , or change your language if the user ask to
+- Answer questions based ONLY on the content in the documents but in any language . If the information isn't in any document, clearly state this.
 - When referencing specific information, mention the document name, page number, or section when possible
 - Maintain context throughout the conversation about these documents
 - Present information in a clear, structured manner

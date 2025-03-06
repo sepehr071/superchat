@@ -82,7 +82,16 @@ function addUIElementsToExistingMessages() {
   const messages = document.querySelectorAll('.message');
   
   messages.forEach(message => {
-    // Only process assistant messages (user messages don't need copy buttons)
+    // Check for Persian text in both user and assistant messages
+    const messageText = message.textContent || '';
+    const hasPersianText = /[\u0600-\u06FF]/.test(messageText);
+    
+    // Add RTL class if Persian text is detected
+    if (hasPersianText && !message.classList.contains('rtl-text')) {
+      message.classList.add('rtl-text');
+    }
+    
+    // Only process assistant messages for copy buttons
     if (message.classList.contains('assistant-message')) {
       // Check if the message already has action buttons
       if (!message.querySelector('.message-actions')) {
@@ -157,42 +166,71 @@ function addGoToTopButton(chatMessagesContainer) {
   // Only add if we're in a chat interface
   if (!chatMessagesContainer) return;
   
-  // Create button element
-  const goToTopBtn = document.createElement('button');
-  goToTopBtn.className = 'go-to-top-button hidden';
-  goToTopBtn.setAttribute('aria-label', 'Scroll to top');
-  goToTopBtn.innerHTML = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="18 15 12 9 6 15"></polyline>
-    </svg>
-  `;
+  // Check if there's already a go-to-top button
+  let goToTopBtn = document.querySelector('.go-to-top-button');
   
-  // Append button to body - this ensures it can be fixed positioned properly
-  document.body.appendChild(goToTopBtn);
+  // If not, create a new one
+  if (!goToTopBtn) {
+    goToTopBtn = document.createElement('button');
+    goToTopBtn.id = 'go-to-top-btn';
+    goToTopBtn.className = 'go-to-top-button hidden';
+    goToTopBtn.setAttribute('aria-label', 'Scroll to top');
+    goToTopBtn.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+    `;
+    
+    // Make button highly visible for debugging
+    goToTopBtn.style.zIndex = '9999';
+    
+    // Append button to body - this ensures it can be fixed positioned properly
+    document.body.appendChild(goToTopBtn);
+    
+    console.log('Added go-to-top button to page');
+  }
   
   // Track last known scroll position for optimization
   let lastScrollTop = 0;
-  let scrollTimeout;
   
-  // Show/hide button based on scroll position with debouncing for better performance
-  chatMessagesContainer.addEventListener('scroll', function() {
-    clearTimeout(scrollTimeout);
+  // Show/hide button based on scroll position
+  function updateButtonVisibility() {
+    // Threshold - show button when scrolled down
+    const scrollThreshold = 500;
     
-    scrollTimeout = setTimeout(() => {
-      // Threshold - show button when scrolled down more than 600px
-      const scrollThreshold = 600;
-      
-      // Only update the UI if we've scrolled significantly
-      if (Math.abs(chatMessagesContainer.scrollTop - lastScrollTop) > 50) {
-        if (chatMessagesContainer.scrollTop > scrollThreshold) {
-          goToTopBtn.classList.remove('hidden');
-        } else {
-          goToTopBtn.classList.add('hidden');
-        }
-        
-        lastScrollTop = chatMessagesContainer.scrollTop;
+    // Check if we're on a mobile device
+    const isMobile = window.innerWidth <= 768;
+    
+    // Use a lower threshold for mobile devices
+    const mobileThreshold = 300;
+    const effectiveThreshold = isMobile ? mobileThreshold : scrollThreshold;
+    
+    if (chatMessagesContainer.scrollTop > effectiveThreshold) {
+      goToTopBtn.classList.remove('hidden');
+      // Add mobile class for mobile-specific styling
+      if (isMobile) {
+        goToTopBtn.classList.add('mobile');
+      } else {
+        goToTopBtn.classList.remove('mobile');
       }
-    }, 100); // 100ms debounce
+      
+      // Button visibility updated
+    } else {
+      goToTopBtn.classList.add('hidden');
+    }
+    
+    lastScrollTop = chatMessagesContainer.scrollTop;
+  }
+  
+  // Initial check
+  updateButtonVisibility();
+  
+  // Add scroll event with throttling for better performance
+  chatMessagesContainer.addEventListener('scroll', function() {
+    // Only update if we've scrolled significantly (without logging)
+    if (Math.abs(chatMessagesContainer.scrollTop - lastScrollTop) > 50) {
+      updateButtonVisibility();
+    }
   });
   
   // Scroll to top with smooth animation when button is clicked
@@ -203,12 +241,18 @@ function addGoToTopButton(chatMessagesContainer) {
     });
   });
   
+  // Update on window resize
+  window.addEventListener('resize', updateButtonVisibility);
+  
   // Clean up on page navigation/unload
   window.addEventListener('beforeunload', function() {
-    if (goToTopBtn.parentNode) {
+    if (goToTopBtn && goToTopBtn.parentNode) {
       goToTopBtn.parentNode.removeChild(goToTopBtn);
     }
   });
+  
+  // Force update after a delay to ensure proper initialization
+  setTimeout(updateButtonVisibility, 500);
 }
 
 // Function to setup MutationObserver to watch for new messages
@@ -324,8 +368,71 @@ function initializeChat() {
   // Set up MutationObserver to watch for new messages
   setupMessageObserver();
   
-  // Add go-to-top button
-  addGoToTopButton(chatMessages);
+  // Clean "Go to Top" implementation for chat interface
+  setTimeout(() => {
+    // Remove any existing buttons
+    const existingButton = document.getElementById('go-to-top-btn');
+    if (existingButton) {
+      existingButton.remove();
+    }
+    
+    // Create the button
+    const goToTopBtn = document.createElement('button');
+    goToTopBtn.id = 'go-to-top-btn';
+    goToTopBtn.className = 'go-to-top-button hidden';
+    goToTopBtn.setAttribute('aria-label', 'Go to top');
+    goToTopBtn.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+    `;
+    
+    // Add to document
+    document.body.appendChild(goToTopBtn);
+    
+    // Get chat messages container
+    const chatMessages = document.getElementById('chat-messages');
+    
+    if (chatMessages) {
+      // Button click handler - scroll to top (without console logs)
+      goToTopBtn.addEventListener('click', function() {
+        chatMessages.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      });
+      
+      // Scroll handler - show/hide button
+      chatMessages.addEventListener('scroll', function() {
+        const threshold = 300;
+        
+        // Check if we're on a mobile device
+        const isMobile = window.innerWidth <= 768;
+        
+        if (chatMessages.scrollTop > threshold) {
+          goToTopBtn.classList.remove('hidden');
+          // Add mobile class for mobile-specific styling
+          if (isMobile) {
+            goToTopBtn.classList.add('mobile');
+          } else {
+            goToTopBtn.classList.remove('mobile');
+          }
+        } else {
+          goToTopBtn.classList.add('hidden');
+        }
+      });
+      
+      // Ensure button visibility checks run periodically
+      setInterval(function() {
+        // If we have enough content to scroll, check visibility
+        if (chatMessages.scrollHeight > chatMessages.clientHeight) {
+          if (chatMessages.scrollTop > 300) {
+            goToTopBtn.classList.remove('hidden');
+          }
+        }
+      }, 2000);
+    }
+  }, 1000);
   
   // Add event listener for send button
   sendButton.addEventListener('click', sendMessage);
@@ -436,11 +543,18 @@ function addTableDownloadButtons(messageElement) {
         });
         
         if (!response.ok) {
-          throw new Error('Failed to generate PDF');
+          const errorText = await response.text().catch(() => 'Unknown error');
+          throw new Error(`Failed to generate PDF: ${response.status} - ${errorText}`);
         }
         
         // Convert the response to a blob
         const blob = await response.blob();
+        
+        // Log blob details for debugging
+        console.log(`PDF blob received - Size: ${blob.size} bytes, Type: ${blob.type}`);
+        
+        // Proceed with download even if content type isn't exactly as expected
+        // Many browsers handle PDF blobs correctly regardless of the MIME type
         
         // Create a download link and trigger it
         const url = window.URL.createObjectURL(blob);
@@ -469,6 +583,20 @@ function addTableDownloadButtons(messageElement) {
         console.error('Error downloading table as PDF:', error);
         downloadButton.classList.add('error');
         downloadButton.querySelector('span').textContent = 'Download failed';
+        
+        // Create an error notification
+        const errorMsg = document.createElement('div');
+        errorMsg.className = 'system-message';
+        errorMsg.style.backgroundColor = 'rgba(239, 68, 68, 0.07)';
+        errorMsg.style.color = '#ef4444';
+        errorMsg.textContent = `Table export failed: ${error.message}`;
+        
+        // Find the chat messages container and append the error
+        const chatMessages = document.getElementById('chat-messages');
+        if (chatMessages) {
+          chatMessages.appendChild(errorMsg);
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
         
         setTimeout(() => {
           downloadButton.classList.remove('error');
@@ -967,6 +1095,16 @@ function sendMessage() {
             console.log('Conversation loaded event received');
             // Add UI elements to all messages in the loaded conversation
             setTimeout(() => {
+              // Apply RTL to messages first
+              const allMessages = document.querySelectorAll('.message');
+              allMessages.forEach(msg => {
+                const msgText = msg.textContent || '';
+                if (/[\u0600-\u06FF]/.test(msgText) && !msg.classList.contains('rtl-text')) {
+                  msg.classList.add('rtl-text');
+                }
+              });
+              
+              // Then add UI elements and setup observer
               addUIElementsToExistingMessages();
               setupMessageObserver(); // Also set up the observer again
             }, 200); // Small delay to ensure DOM is updated

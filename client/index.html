@@ -619,5 +619,129 @@
   <script src="creator-animation.js"></script>
   <script src="particles-background.js"></script>
   <script src="performance-utils.js"></script>
+  
+  <!-- Direct implementation of Go to Top button for chat interface -->
+  <button id="go-to-top-btn" class="go-to-top-button hidden" aria-label="Go to top" style="z-index: 9999;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="18 15 12 9 6 15"></polyline>
+    </svg>
+  </button>
+  
+  <script>
+    // Direct implementation for the chat interface Go to Top button
+    document.addEventListener('DOMContentLoaded', function() {
+      const goToTopBtn = document.getElementById('go-to-top-btn');
+      const chatMessages = document.getElementById('chat-messages');
+      
+      if (goToTopBtn && chatMessages) {
+        console.log('Setting up go-to-top button for chat interface');
+        
+        // Show/hide button based on scroll position
+        chatMessages.addEventListener('scroll', function() {
+          const isMobile = window.innerWidth <= 768;
+          const threshold = isMobile ? 300 : 500;
+          
+          if (chatMessages.scrollTop > threshold) {
+            goToTopBtn.classList.remove('hidden');
+            if (isMobile) {
+              goToTopBtn.classList.add('mobile');
+            } else {
+              goToTopBtn.classList.remove('mobile');
+            }
+          } else {
+            goToTopBtn.classList.add('hidden');
+          }
+        });
+        
+        // Scroll to top when button is clicked
+        goToTopBtn.addEventListener('click', function() {
+          chatMessages.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+        });
+        
+        // Force initial check after rendering is complete
+        setTimeout(function() {
+          chatMessages.dispatchEvent(new Event('scroll'));
+        }, 1000);
+      }
+    });
+  </script>
+  
+  <!-- Explicit Go to Top button for chat interface -->
+  <button id="go-to-top-btn" class="go-to-top-button hidden" aria-label="Go to top of conversation" style="z-index: 9999;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="18 15 12 9 6 15"></polyline>
+    </svg>
+  </button>
+  
+  <script>
+    // Direct implementation for the Go to Top button
+    window.addEventListener('DOMContentLoaded', function() {
+      console.log('DOMContentLoaded fired - setting up go-to-top button');
+      const goToTopBtn = document.getElementById('go-to-top-btn');
+      
+      if (goToTopBtn) {
+        console.log('Found go-to-top button, setting up event handlers');
+        
+        // Get chat messages container
+        const setupScrollHandlers = function() {
+          const chatMessages = document.getElementById('chat-messages');
+          
+          if (chatMessages) {
+            //console.log('Found chat messages container, attaching handlers');
+            
+            // Click handler
+            goToTopBtn.addEventListener('click', function() {
+              //console.log('Go to top button clicked');
+              chatMessages.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+              });
+            });
+            
+            // Scroll handler
+            chatMessages.addEventListener('scroll', function() {
+              const isMobile = window.innerWidth <= 768;
+              const threshold = isMobile ? 300 : 500;
+              
+              //console.log('Scroll detected:', chatMessages.scrollTop);
+              
+              if (chatMessages.scrollTop > threshold) {
+                goToTopBtn.classList.remove('hidden');
+                if (isMobile) {
+                  goToTopBtn.classList.add('mobile');
+                } else {
+                  goToTopBtn.classList.remove('mobile');
+                }
+                //console.log('Showing go-to-top button');
+              } else {
+                goToTopBtn.classList.add('hidden');
+              }
+            });
+            
+            // Force initial check after a delay
+            setTimeout(function() {
+              if (chatMessages.scrollTop > 0) {
+                //console.log('Initial scroll position:', chatMessages.scrollTop);
+                const event = new Event('scroll');
+                chatMessages.dispatchEvent(event);
+              }
+            }, 1000);
+          } else {
+            // If messages container isn't found yet, try again after a delay
+            //console.log('Chat messages container not found, will retry');
+            setTimeout(setupScrollHandlers, 500);
+          }
+        };
+        
+        // Start setting up handlers
+        setupScrollHandlers();
+      } else {
+        console.error('Go to top button not found');
+      }
+    });
+  </script>
 </body>
 </html>

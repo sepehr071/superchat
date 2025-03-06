@@ -1,67 +1,56 @@
 # Node.js dependencies
 node_modules/
-npm-debug.log
-yarn-debug.log
-yarn-error.log
+*/node_modules/
 package-lock.json
+*/package-lock.json
 
-# Environment files
+# Environment variables
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.new
+.env.*
+*.env
+!.env.example
 
 # Database files
 *.db
-*.db-journal
-server/data/*.db
-
-# Uploads directory - User uploaded files
-server/uploads/
+*.sqlite
+*.sqlite3
+server/data/
 
 # Logs
 logs/
 *.log
+nohup.out
+output.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-server/output.log
-server/nohup.out
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
+# User uploaded files
+server/uploads/
+uploads/
 
-# IDE and editor folders
-.idea/
+# Build and distribution files
+dist/
+build/
+out/
+.cache/
+
+# IDE and editor files
 .vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+.DS_Store
+Thumbs.db
 *.swp
 *.swo
-.DS_Store
-.directory
-.Trash-*
-.nfs*
-.project
-.classpath
-.settings/
+*~
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Misc
-.cache/
-dist/
-coverage/
-.nyc_output/
+# Temporary files
 temp/
 tmp/
+.tmp/
+*.tmp
+*.bak
+*.backup
