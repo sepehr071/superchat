@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Chat Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Admin dashboard specific styles */
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .admin-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #222;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+        
+        .admin-section {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .admin-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .admin-section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-card {
+            background-color: #f9f9f9;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #004080; /* Darker blue for better contrast */
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #333; /* Darker text for better readability */
+            font-weight: 500;
+        }
+        
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .user-table th, .user-table td {
+            padding: 10px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .user-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        
+        .user-table tr:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .user-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-delete {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-delete:hover {
+            background-color: #e60000;
+        }
+        
+        .user-link {
+            color: #0066cc;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .user-link:hover {
+            color: #004999;
+            text-decoration: underline;
+        }
+        
+        #logout-btn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: #0066cc;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+        }
+        
+        .refresh-btn {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+        
+        .refresh-btn:hover {
+            background-color: #0052a3;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            width: 400px;
+            max-width: 90%;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .modal-title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        
+        .modal-body {
+            margin-bottom: 20px;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .btn-cancel {
+            background-color: #ccc;
+            color: #333;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+        
+        .btn-confirm {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <div class="admin-title">Super Chat Admin Dashboard</div>
+            <button id="logout-btn">Logout</button>
+        </div>
+        
+        <div class="admin-section">
+            <div class="admin-section-header">
+                <div class="admin-section-title">System Statistics</div>
+                <button class="refresh-btn" id="refresh-stats-btn">Refresh Stats</button>
+            </div>
+            <div class="stats-grid" id="stats-container">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-users">-</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-conversations">-</div>
+                    <div class="stat-label">Total Conversations</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-messages">-</div>
+                    <div class="stat-label">Total Messages</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-files">-</div>
+                    <div class="stat-label">Total Files</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="new-users">-</div>
+                    <div class="stat-label">New Users (30 days)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="new-conversations">-</div>
+                    <div class="stat-label">New Conversations (30 days)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-storage">-</div>
+                    <div class="stat-label">Total Storage</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="database-size">-</div>
+                    <div class="stat-label">Database Size</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="admin-section">
+            <div class="admin-section-header">
+                <div class="admin-section-title">User Management</div>
+                <button class="refresh-btn" id="refresh-users-btn">Refresh Users</button>
+            </div>
+            <div id="users-table-container">
+                <table class="user-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Created</th>
+                            <th>Conversations</th>
+                            <th>Messages</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        <!-- User rows will be added here dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Delete User Confirmation Modal -->
+    <div class="modal" id="delete-user-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Confirm User Deletion</div>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete user <span id="delete-username"></span>? This action cannot be undone and will delete all their conversations, messages, and files.
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="cancel-delete-btn">Cancel</button>
+                <button class="btn-confirm" id="confirm-delete-btn">Delete User</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is admin
+            checkAdminAccess();
+            
+            // Initialize event listeners
+            initializeEventListeners();
+            
+            // Load initial data
+            loadStats();
+            loadUsers();
+        });
+        
+        // Function to check if user has admin access
+        function checkAdminAccess() {
+            fetch('/api/auth/me', {
+                method: 'GET',
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Not authenticated');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data.user || !data.user.isAdmin) {
+                    // Redirect non-admin users to login
+                    window.location.href = '/login.html';
+                }
+            })
+            .catch(error => {
+                console.error('Authentication error:', error);
+                window.location.href = '/login.html';
+            });
+        }
+        
+        // Initialize event listeners
+        function initializeEventListeners() {
+            // Logout button
+            document.getElementById('logout-btn').addEventListener('click', function() {
+                fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                })
+                .then(() => {
+                    window.location.href = '/login.html';
+                })
+                .catch(error => {
+                    console.error('Logout error:', error);
+                });
+            });
+            
+            // Refresh stats button
+            document.getElementById('refresh-stats-btn').addEventListener('click', loadStats);
+            
+            // Refresh users button
+            document.getElementById('refresh-users-btn').addEventListener('click', loadUsers);
+            
+            // Modal close button
+            document.querySelector('.modal-close').addEventListener('click', closeModal);
+            
+            // Cancel delete button
+            document.getElementById('cancel-delete-btn').addEventListener('click', closeModal);
+            
+            // Confirm delete button
+            document.getElementById('confirm-delete-btn').addEventListener('click', confirmDeleteUser);
+        }
+        
+        // Load system statistics
+        function loadStats() {
+            const statsContainer = document.getElementById('stats-container');
+            
+            // Add loading indicators to each stat value instead of replacing the entire container
+            document.querySelectorAll('.stat-value').forEach(element => {
+                element.innerHTML = '<div class="loading-spinner" style="margin: 0 auto; width: 20px; height: 20px;"></div>';
+            });
+            
+            fetch('/api/admin/stats', {
+                method: 'GET',
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch stats');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Create a function to safely update elements
+                const safeUpdateElement = (id, value) => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.textContent = value;
+                    }
+                };
+                
+                // Update stats cards safely
+                safeUpdateElement('total-users', data.totalUsers || 0);
+                safeUpdateElement('total-conversations', data.totalConversations || 0);
+                safeUpdateElement('total-messages', data.totalMessages || 0);
+                safeUpdateElement('total-files', data.totalFiles || 0);
+                safeUpdateElement('new-users', data.newUsers30Days || 0);
+                safeUpdateElement('new-conversations', data.newConversations30Days || 0);
+                
+                // Format storage values
+                safeUpdateElement('total-storage', formatBytes(data.totalStorage || 0));
+                safeUpdateElement('database-size', formatBytes(data.databaseSize || 0));
+            })
+            .catch(error => {
+                console.error('Error loading stats:', error);
+                
+                // Safely show error state while preserving the structure
+                document.querySelectorAll('.stat-value').forEach(element => {
+                    element.textContent = '-';
+                });
+                
+                // Show an error message at the top
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'empty-state';
+                errorDiv.style.marginBottom = '15px';
+                errorDiv.style.color = '#e53e3e';
+                errorDiv.textContent = 'Failed to load statistics';
+                
+                // Insert at the beginning of the container
+                if (statsContainer.firstChild) {
+                    statsContainer.insertBefore(errorDiv, statsContainer.firstChild);
+                } else {
+                    statsContainer.appendChild(errorDiv);
+                }
+            });
+        }
+        
+        // Load users
+        function loadUsers() {
+            const usersTableBody = document.getElementById('users-table-body');
+            
+            // Show loading state
+            usersTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;"><div class="loading-spinner" style="margin: 20px auto;"></div></td></tr>';
+            
+            fetch('/api/admin/users', {
+                method: 'GET',
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch users');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.users && data.users.length > 0) {
+                    // Clear loading state
+                    usersTableBody.innerHTML = '';
+                    
+                    // Add user rows
+                    data.users.forEach(user => {
+                        const row = document.createElement('tr');
+                        
+                        // Format date safely
+                        const formattedDate = formatDate(user.created_at);
+                        
+                        row.innerHTML = `
+                            <td>${user.id}</td>
+                            <td><a href="user-details.html?userId=${user.id}" class="user-link">${user.username}</a></td>
+                            <td>${formattedDate}</td>
+                            <td>${user.conversationCount || 0}</td>
+                            <td>${user.messageCount || 0}</td>
+                            <td class="user-actions">
+                                ${user.isAdmin ? '<span style="color: #0066cc;">Admin</span>' :
+                                    `<button class="btn-delete" data-userid="${user.id}" data-username="${user.username}">Delete</button>`}
+                            </td>
+                        `;
+                        
+                        usersTableBody.appendChild(row);
+                    });
+                    
+                    // Add delete button event listeners
+                    document.querySelectorAll('.btn-delete').forEach(button => {
+                        button.addEventListener('click', function() {
+                            openDeleteModal(this.dataset.userid, this.dataset.username);
+                        });
+                    });
+                } else {
+                    usersTableBody.innerHTML = '<tr><td colspan="6" class="empty-state">No users found</td></tr>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading users:', error);
+                usersTableBody.innerHTML = '<tr><td colspan="6" class="empty-state">Failed to load users</td></tr>';
+            });
+        }
+        
+        // Open delete confirmation modal
+        function openDeleteModal(userId, username) {
+            document.getElementById('delete-username').textContent = username;
+            document.getElementById('confirm-delete-btn').dataset.userid = userId;
+            document.getElementById('delete-user-modal').style.display = 'flex';
+        }
+        
+        // Close modal
+        function closeModal() {
+            document.getElementById('delete-user-modal').style.display = 'none';
+        }
+        
+        // Confirm user deletion
+        function confirmDeleteUser() {
+            const userId = document.getElementById('confirm-delete-btn').dataset.userid;
+            
+            // Disable delete button and show loading state
+            const deleteBtn = document.getElementById('confirm-delete-btn');
+            const originalText = deleteBtn.textContent;
+            deleteBtn.disabled = true;
+            deleteBtn.innerHTML = '<div class="loading-spinner" style="width: 14px; height: 14px; border-width: 2px;"></div>';
+            
+            fetch(`/api/admin/users/${userId}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to delete user');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Close modal
+                closeModal();
+                
+                // Reload users
+                loadUsers();
+                
+                // Reload stats
+                loadStats();
+            })
+            .catch(error => {
+                console.error('Error deleting user:', error);
+                alert('Failed to delete user. Please try again.');
+            })
+            .finally(() => {
+                // Reset delete button
+                deleteBtn.disabled = false;
+                deleteBtn.textContent = originalText;
+            });
+        }
+        
+        // Safely format a date with fallback for invalid dates
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            
+            try {
+                // Try to parse the date string
+                const date = new Date(dateString);
+                
+                // Check if date is valid
+                if (isNaN(date.getTime())) {
+                    console.warn('Invalid date:', dateString);
+                    return 'N/A';
+                }
+                
+                // Format the date
+                return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+            } catch (error) {
+                console.warn('Error formatting date:', error);
+                return 'N/A';
+            }
+        }
+        
+        // Format bytes to human-readable format
+        function formatBytes(bytes, decimals = 2) {
+            if (!bytes || bytes === 0) return '0 Bytes';
+            
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>

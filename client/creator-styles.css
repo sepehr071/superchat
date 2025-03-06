@@ -1,0 +1,189 @@
+/* Creator attribution and terminal typing effect */
+.terminal-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  font-family: 'Courier New', monospace;
+}
+
+.terminal {
+  background-color: #282c34;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 300px;
+  max-height: 120px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.terminal-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.terminal-button {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.terminal-close {
+  background-color: #ff5f56;
+}
+
+.terminal-minimize {
+  background-color: #ffbd2e;
+}
+
+.terminal-maximize {
+  background-color: #27c93f;
+}
+
+.terminal-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #abb2bf;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.terminal-content {
+  color: #abb2bf;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 600; /* Make text bolder */
+}
+
+.terminal-prompt {
+  color: #98c379;
+  margin-right: 8px;
+}
+
+.terminal-text {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  white-space: nowrap;
+  border-right: 0.15em solid #61afef;
+  animation: blink-caret 0.75s step-end infinite;
+  width: 0;
+  font-weight: 600; /* Make text bolder */
+}
+
+.terminal-text.typing {
+  animation: typing 3s steps(40, end) forwards, blink-caret 0.75s step-end infinite;
+}
+
+.terminal-link {
+  color: #61afef;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.terminal-link:hover {
+  color: #56b6c2;
+  text-decoration: underline;
+}
+
+@keyframes typing {
+  from { width: 0 }
+  to { width: 100% }
+}
+
+@keyframes blink-caret {
+  from, to { border-color: transparent }
+  50% { border-color: #61afef }
+}
+
+/* Mobile responsiveness improvements */
+@media (max-width: 768px) {
+  .app-container {
+    padding: 0.5rem;
+  }
+  
+  .nav-header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .upload-area {
+    height: 200px;
+  }
+  
+  .upload-prompt svg {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .message {
+    max-width: 100%;
+  }
+  
+  .chat-input-container {
+    padding: 0.5rem;
+  }
+  
+  #chat-input {
+    padding: 0.5rem;
+    min-height: 50px;
+  }
+  
+  #send-button {
+    width: 50px;
+  }
+  
+  .terminal {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .nav-links {
+    gap: 0.5rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .user-info {
+    margin-top: 0.5rem;
+  }
+  
+  .upload-prompt p {
+    font-size: 0.875rem;
+  }
+  
+  .file-limit {
+    font-size: 0.7rem;
+  }
+  
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .action-buttons {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .conversation-card {
+    min-width: 100%;
+  }
+}

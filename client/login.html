@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Super Chat</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="creator-styles.css">
+  <style>
+    .auth-container {
+      max-width: 400px;
+      margin: 0 auto;
+      padding: 2rem;
+      background-color: var(--bg-medium);
+      border: 1px solid var(--border-highlight);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+    
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    
+    .form-group label {
+      font-weight: 600;
+      color: var(--text-color);
+      font-size: 1.05rem;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+    }
+    
+    .form-group input {
+      padding: 0.75rem;
+      border: 1px solid var(--border-highlight);
+      border-radius: 8px;
+      font-size: 1rem;
+      background-color: var(--bg-dark);
+      color: var(--text-color);
+      box-shadow: var(--inset-shadow);
+    }
+    
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3), var(--inset-shadow);
+    }
+    
+    .auth-button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    
+    .auth-button:hover {
+      background-color: var(--primary-dark);
+    }
+    
+    .auth-links {
+      margin-top: 1.5rem;
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--light-text);
+    }
+    
+    .auth-links a {
+      color: var(--primary-light);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    .auth-links a:hover {
+      text-decoration: underline;
+    }
+    
+    .error-message {
+      color: var(--error-color);
+      background-color: rgba(239, 68, 68, 0.2);
+      padding: 0.75rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      display: none;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <h1>Super Chat</h1>
+      <p>Login to your account</p>
+    </header>
+
+    <main>
+      <div class="auth-container">
+        <div id="error-message" class="error-message"></div>
+        
+        <form class="auth-form" id="login-form">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+          </div>
+          
+          <button type="submit" class="auth-button">Login</button>
+        </form>
+        
+        <div class="auth-links">
+          <p>Don't have an account? <a href="register.html">Register</a></p>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <p>Created by Sepehr Radmard</p>
+    </footer>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check if user is already logged in
+      fetch('/api/auth/me', {
+        method: 'GET',
+        credentials: 'include'
+      })
+      .then(response => {
+        if (response.ok) {
+          // User is already logged in
+          return response.json().then(data => {
+            // Redirect to admin dashboard if admin, otherwise regular dashboard
+            window.location.href = data.user && data.user.isAdmin ? 'admin-dashboard.html' : 'dashboard.html';
+          });
+        }
+        // If not OK but status is 401, this is expected for not logged in users
+        // We silently ignore 401 as it's the expected state for the login page
+        if (response.status === 401) {
+          // User is not logged in, which is expected
+          return;
+        }
+        
+        // For other error codes, log the error
+        throw new Error(`Unexpected response: ${response.status}`);
+      })
+      .catch(error => {
+        // Only log unexpected errors, not the normal 401 authentication failures
+        if (!error.message.includes('401')) {
+          console.error('Error checking authentication:', error);
+        }
+      });
+      
+      // Handle login form submission
+      const loginForm = document.getElementById('login-form');
+      const errorMessage = document.getElementById('error-message');
+      
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        
+        try {
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password }),
+            credentials: 'include'
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+            // Login successful
+            if (data.redirect) {
+              // Use the redirect URL from the server
+              window.location.href = data.redirect;
+            } else {
+              // Fallback to dashboard
+              window.location.href = 'dashboard.html';
+            }
+          } else {
+            // Display error message
+            errorMessage.textContent = data.error || 'Login failed. Please try again.';
+            errorMessage.style.display = 'block';
+          }
+        } catch (error) {
+          console.error('Login error:', error);
+          errorMessage.textContent = 'An error occurred. Please try again.';
+          errorMessage.style.display = 'block';
+        }
+      });
+    });
+  </script>
+  <script src="creator-animation.js"></script>
+</body>
+</html>

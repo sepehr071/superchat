@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Details - Super Chat Admin</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* User details specific styles */
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .admin-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #222;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+        
+        .admin-section {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .admin-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .admin-section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .back-button {
+            display: flex;
+            align-items: center;
+            background-color: #f5f5f5;
+            color: #333;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s ease;
+        }
+        
+        .back-button:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .back-button i {
+            margin-right: 5px;
+        }
+        
+        .user-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-item {
+            background-color: #f9f9f9;
+            border-radius: 6px;
+            padding: 15px;
+        }
+        
+        .info-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .two-column-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+        
+        .conversations-list {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            overflow: hidden;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .conversations-header {
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-bottom: 1px solid #ddd;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .conversations-container {
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        
+        .conversation-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .conversation-item:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .conversation-item.active {
+            background-color: #e6f7ff;
+            border-left: 3px solid #0066cc;
+        }
+        
+        .conversation-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+            word-break: break-word;
+        }
+        
+        .conversation-meta {
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .conversation-details {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .conversation-header {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-bottom: 1px solid #eee;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .messages-container {
+            padding: 15px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            max-width: 85%;
+        }
+        
+        .message.user {
+            margin-left: auto;
+        }
+        
+        .message-bubble {
+            padding: 10px 15px;
+            border-radius: 18px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        
+        .message.system .message-bubble {
+            background-color: #f0f0f0;
+            color: #333;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .message.user .message-bubble {
+            background-color: #e6f7ff;
+            color: #333;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .message.assistant .message-bubble {
+            background-color: #f5f0ff;
+            color: #333;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .message-sender {
+            font-size: 12px;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .message-time {
+            font-size: 11px;
+            color: #999;
+            text-align: right;
+            margin-top: 5px;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: #0066cc;
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto;
+        }
+        
+        .loading-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            padding: 20px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .file-badge {
+            display: inline-block;
+            background-color: #e6f7ff;
+            color: #0066cc;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+        
+        /* Files accordion styles */
+        .files-section {
+            margin-bottom: 15px;
+        }
+        
+        .files-accordion {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .files-header {
+            background-color: #222;
+            color: #fff;
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s ease;
+            user-select: none;
+        }
+        
+        .files-header:hover {
+            background-color: #333;
+        }
+        
+        .files-title {
+            font-weight: 600;
+        }
+        
+        .toggle-icon {
+            font-size: 12px;
+            transition: transform 0.3s ease;
+        }
+        
+        .files-content {
+            max-height: 0;
+            overflow: hidden;
+            background-color: #222;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+        
+        .files-content.open {
+            max-height: 500px;
+            padding: 12px 15px;
+        }
+        
+        .files-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: #fff;
+        }
+        
+        .file-name {
+            font-size: 14px;
+            word-break: break-all;
+        }
+        
+        .file-date {
+            font-size: 12px;
+            color: #aaa;
+            white-space: nowrap;
+            margin-left: 15px;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .two-column-layout {
+                grid-template-columns: 1fr;
+            }
+            
+            .conversations-list, .conversation-details {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <div class="admin-title">User Details</div>
+            <button class="back-button" id="back-btn">
+                <i>&larr;</i> Back to Admin Dashboard
+            </button>
+        </div>
+        
+        <div class="admin-section" id="user-info-section">
+            <div class="admin-section-header">
+                <div class="admin-section-title">User Information</div>
+                <div id="user-id-display"></div>
+            </div>
+            <div class="user-info" id="user-info-container">
+                <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="admin-section">
+            <div class="admin-section-header">
+                <div class="admin-section-title">Conversations & Messages</div>
+            </div>
+            <div class="two-column-layout">
+                <div class="conversations-list">
+                    <div class="conversations-header">
+                        Conversations
+                    </div>
+                    <div class="conversations-container" id="conversations-container">
+                        <div class="loading-container">
+                            <div class="loading-spinner"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="conversation-details">
+                    <div class="conversation-header" id="conversation-header">
+                        Select a conversation
+                    </div>
+                    <div class="messages-container" id="messages-container">
+                        <div class="empty-state">
+                            Select a conversation to view messages
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is admin
+            checkAdminAccess();
+            
+            // Initialize back button
+            document.getElementById('back-btn').addEventListener('click', function() {
+                window.location.href = 'admin-dashboard.html';
+            });
+            
+            // Get user ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const userId = urlParams.get('userId');
+            
+            if (!userId) {
+                window.location.href = 'admin-dashboard.html';
+                return;
+            }
+            
+            // Display user ID
+            document.getElementById('user-id-display').textContent = `User ID: ${userId}`;
+            
+            // Load user data
+            loadUserDetails(userId);
+            
+            // Load user conversations
+            loadUserConversations(userId);
+        });
+        
+        // Function to check if user has admin access
+        function checkAdminAccess() {
+            fetch('/api/auth/me', {
+                method: 'GET',
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Not authenticated');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data.user || !data.user.isAdmin) {
+                    // Redirect non-admin users to login
+                    window.location.href = '/login.html';
+                }
+            })
+            .catch(error => {
+                console.error('Authentication error:', error);
+                window.location.href = '/login.html';
+            });
+        }
+        
+        // Load user details
+        function loadUserDetails(userId) {
+            const userInfoContainer = document.getElementById('user-info-container');
+            
+            fetch(`/api/admin/users/${userId}`, {
+                method: 'GET',
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user details');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const user = data.user;
+                
+                // Format dates
+                const createdDate = new Date(user.createdAt);
+                const formattedDate = formatDate(user.createdAt);
+                
+                // Update document title
+                document.title = `${user.username} - User Details`;
+                
+                // Clear loading state
+                userInfoContainer.innerHTML = '';
+                
+                // Add user info cards
+                const infoItems = [
+                    { label: 'Username', value: user.username },
+                    { label: 'User ID', value: user.id },
+                    { label: 'Created', value: formattedDate },
+                    { label: 'Admin Status', value: user.isAdmin ? 'Administrator' : 'Regular User' },
+                    { label: 'Conversations', value: user.conversationCount || 0 }
+                ];
+                
+                infoItems.forEach(item => {
+                    const infoItemEl = document.createElement('div');
+                    infoItemEl.className = 'info-item';
+                    infoItemEl.innerHTML = `
+                        <div class="info-label">${item.label}</div>
+                        <div class="info-value">${item.value}</div>
+                    `;
+                    userInfoContainer.appendChild(infoItemEl);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading user details:', error);
+                userInfoContainer.innerHTML = '<div class="empty-state">Failed to load user details</div>';
+            });
+        }
+        
+        // Load user conversations
+        function loadUserConversations(userId) {
+            const conversationsContainer = document.getElementById('conversations-container');
+            
+            fetch(`/api/admin/users/${userId}/conversations`, {
+                method: 'GET',
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch conversations');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Clear loading state
+                conversationsContainer.innerHTML = '';
+                
+                if (data.conversations && data.conversations.length > 0) {
+                    // Sort conversations by updated date (newest first)
+                    const sortedConversations = data.conversations.sort((a, b) => {
+                        return new Date(b.updatedAt) - new Date(a.updatedAt);
+                    });
+                    
+                    // Add conversation items
+                    sortedConversations.forEach(conversation => {
+                        const conversationItem = document.createElement('div');
+                        conversationItem.className = 'conversation-item';
+                        conversationItem.dataset.id = conversation.id;
+                        
+                        // Format date
+                        const updatedDate = formatDate(conversation.updatedAt);
+                        
+                        conversationItem.innerHTML = `
+                            <div class="conversation-title">${conversation.title || 'Untitled Conversation'}</div>
+                            <div class="conversation-meta">
+                                <span>${updatedDate}</span>
+                                <span>
+                                    <span class="file-badge">${conversation.messageCount} messages</span>
+                                    ${conversation.fileCount > 0 ? `<span class="file-badge">${conversation.fileCount} files</span>` : ''}
+                                </span>
+                            </div>
+                        `;
+                        
+                        // Add click event to load conversation
+                        conversationItem.addEventListener('click', function() {
+                            // Remove active class from all conversation items
+                            document.querySelectorAll('.conversation-item').forEach(item => {
+                                item.classList.remove('active');
+                            });
+                            
+                            // Add active class to clicked item
+                            this.classList.add('active');
+                            
+                            // Load conversation messages
+                            loadConversationMessages(conversation.id);
+                        });
+                        
+                        conversationsContainer.appendChild(conversationItem);
+                    });
+                } else {
+                    conversationsContainer.innerHTML = '<div class="empty-state">No conversations found</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading conversations:', error);
+                conversationsContainer.innerHTML = '<div class="empty-state">Failed to load conversations</div>';
+            });
+        }
+        
+        // Load conversation messages
+        function loadConversationMessages(chatId) {
+            const messagesContainer = document.getElementById('messages-container');
+            const conversationHeader = document.getElementById('conversation-header');
+            
+            // Show loading state
+            messagesContainer.innerHTML = '<div class="loading-container"><div class="loading-spinner"></div></div>';
+            conversationHeader.textContent = 'Loading conversation...';
+            
+            fetch(`/api/admin/conversations/${chatId}`, {
+                method: 'GET',
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch conversation');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const conversation = data.conversation;
+                
+                // Update conversation header
+                conversationHeader.textContent = conversation.title || 'Untitled Conversation';
+                
+                // Clear loading state
+                messagesContainer.innerHTML = '';
+                
+                // Add file information if present as collapsible accordion
+                if (conversation.files && conversation.files.length > 0) {
+                    const filesSection = document.createElement('div');
+                    filesSection.className = 'files-section';
+                    
+                    // Create accordion structure with collapsible content
+                    filesSection.innerHTML = `
+                        <div class="files-accordion">
+                            <div class="files-header">
+                                <span class="files-title">Files in this conversation (${conversation.files.length})</span>
+                                <span class="toggle-icon">▼</span>
+                            </div>
+                            <div class="files-content">
+                                <div class="files-list">
+                                    ${conversation.files.map(file => `
+                                        <div class="file-item">
+                                            <span class="file-name">${file.name}</span>
+                                            <span class="file-date">${formatDate(file.uploadTime || file.timestamp || '')}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    messagesContainer.appendChild(filesSection);
+                    
+                    // Add toggle functionality
+                    const filesHeader = filesSection.querySelector('.files-header');
+                    const filesContent = filesSection.querySelector('.files-content');
+                    const toggleIcon = filesSection.querySelector('.toggle-icon');
+                    
+                    filesHeader.addEventListener('click', function() {
+                        filesContent.classList.toggle('open');
+                        toggleIcon.textContent = filesContent.classList.contains('open') ? '▲' : '▼';
+                    });
+                }
+                
+                // Add messages
+                if (conversation.messages && conversation.messages.length > 0) {
+                    conversation.messages.forEach(message => {
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = `message ${message.role}`;
+                        
+                        // Format date
+                        const messageTime = formatDate(message.timestamp);
+                        
+                        // Get sender label
+                        let senderLabel = 'System';
+                        if (message.role === 'user') {
+                            senderLabel = conversation.user.username;
+                        } else if (message.role === 'assistant') {
+                            senderLabel = 'Claude AI';
+                        }
+                        
+                        messageDiv.innerHTML = `
+                            <div class="message-sender">${senderLabel}</div>
+                            <div class="message-bubble">${formatMessageContent(message.content)}</div>
+                            <div class="message-time">${messageTime}</div>
+                        `;
+                        
+                        messagesContainer.appendChild(messageDiv);
+                    });
+                    
+                    // Scroll to bottom
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                } else {
+                    messagesContainer.innerHTML = '<div class="empty-state">No messages in this conversation</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading conversation messages:', error);
+                messagesContainer.innerHTML = '<div class="empty-state">Failed to load conversation</div>';
+                conversationHeader.textContent = 'Error loading conversation';
+            });
+        }
+        
+        // Format message content
+        function formatMessageContent(content) {
+            if (!content) return '';
+            
+            // Replace newlines with <br>
+            return content.replace(/\n/g, '<br>');
+        }
+        
+        // Safely format a date with fallback for invalid dates
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            
+            try {
+                // Try to parse the date string
+                const date = new Date(dateString);
+                
+                // Check if date is valid
+                if (isNaN(date.getTime())) {
+                    console.warn('Invalid date:', dateString);
+                    return 'N/A';
+                }
+                
+                // Format the date
+                return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+            } catch (error) {
+                console.warn('Error formatting date:', error);
+                return 'N/A';
+            }
+        }
+    </script>
+</body>
+</html>

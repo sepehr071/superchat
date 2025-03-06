@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Super Chat</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="creator-styles.css">
+  <style>
+    /* Enhanced main header */
+    header {
+      background-color: var(--bg-medium);
+      padding: 1rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border-highlight);
+      box-shadow: var(--shadow);
+    }
+    
+    header h1 {
+      color: var(--primary-color);
+      font-size: 1.8rem;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      margin-bottom: 0.3rem;
+    }
+    
+    header p {
+      color: var(--text-color);
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+    
+    .dashboard-container {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+    
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background-color: var(--bg-light);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border-highlight);
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .user-info h2 {
+      color: var(--text-color);
+      font-weight: 600;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+    }
+    
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-image: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: 700;
+      font-size: 1.1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+    }
+    
+    .primary-button {
+      background-image: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 3px 10px rgba(147, 51, 234, 0.3);
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+    }
+    
+    .primary-button:hover {
+      background-image: linear-gradient(135deg, var(--primary-light), var(--primary-color));
+      transform: translateY(-1px);
+      box-shadow: 0 5px 15px rgba(147, 51, 234, 0.4);
+    }
+    
+    /* Dropdown menu styles */
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 100%;
+      margin-top: 0.5rem;
+      background-color: var(--bg-medium);
+      min-width: 200px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      z-index: 10;
+      border: 1px solid var(--border-highlight);
+    }
+    
+    /* Use a class for showing dropdown instead of hover */
+    .dropdown-content.show {
+      display: block;
+    }
+    
+    .dropdown-item {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-color);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-left: 3px solid transparent;
+      font-weight: 500;
+    }
+    
+    .dropdown-item:first-child {
+      border-radius: 8px 8px 0 0;
+    }
+    
+    .dropdown-item:last-child {
+      border-radius: 0 0 8px 8px;
+    }
+    
+    .dropdown-item:hover {
+      background-color: var(--bg-dark);
+      border-left-color: var(--primary-color);
+      box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .dropdown-icon {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .secondary-button {
+      background-color: var(--bg-dark);
+      color: var(--text-color);
+      border: 1px solid var(--border-highlight);
+      border-radius: 8px;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .secondary-button:hover {
+      background-color: var(--bg-medium);
+      border-color: var(--primary-light);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+    
+    .conversations-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+    
+    .conversation-card {
+      background-color: var(--bg-light);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+    }
+    
+    .conversation-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    .conversation-header {
+      padding: 1.5rem;
+      background-color: var(--primary-light);
+      color: white;
+    }
+    
+    .conversation-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .conversation-date {
+      font-size: 0.875rem;
+      opacity: 0.8;
+    }
+    
+    .conversation-body {
+      padding: 1.5rem;
+    }
+    
+    .conversation-stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--light-text);
+      font-size: 0.875rem;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      background-color: var(--bg-light);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border-highlight);
+    }
+    
+    .empty-state h2 {
+      margin-bottom: 1rem;
+      color: var(--text-color);
+    }
+    
+    .empty-state p {
+      color: var(--light-text);
+      margin-bottom: 2rem;
+    }
+    
+    .loading-spinner {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 200px;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-left-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <h1>Super Chat</h1>
+      <p>Your conversations</p>
+    </header>
+
+    <main>
+      <div class="dashboard-container">
+        <div class="dashboard-header">
+          <div class="user-info">
+            <div class="user-avatar" id="user-avatar"></div>
+            <div>
+              <h2 id="username">Loading...</h2>
+            </div>
+          </div>
+          
+          <div class="action-buttons">
+            <a href="/admin-dashboard.html" id="admin-link" style="display: none; text-decoration: none; margin-right: 10px;">
+              <button class="secondary-button" style="background-color: #2d3748; color: white;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                Admin
+              </button>
+            </a>
+            <div class="dropdown">
+              <button class="primary-button" id="new-chat-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                New Chat
+              </button>
+              <div class="dropdown-content">
+                <div class="dropdown-item" id="new-pdf-chat">
+                  <div class="dropdown-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                  </div>
+                  Pro PDF Chat
+                </div>
+                <div class="dropdown-item" id="new-normal-chat">
+                  <div class="dropdown-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                  </div>
+                  Normal Chat
+                </div>
+              </div>
+            </div>
+            <button class="secondary-button" id="logout-button">Logout</button>
+          </div>
+        </div>
+        
+        <div id="conversations-container">
+          <div class="loading-spinner">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <p>Created by Sepehr Radmard</p>
+    </footer>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const userAvatar = document.getElementById('user-avatar');
+      const usernameElement = document.getElementById('username');
+      const newChatButton = document.getElementById('new-chat-button');
+      const logoutButton = document.getElementById('logout-button');
+      const conversationsContainer = document.getElementById('conversations-container');
+      
+      // Check if user is logged in
+      fetch('/api/auth/me', {
+        method: 'GET',
+        credentials: 'include'
+      })
+      .then(response => {
+        if (!response.ok) {
+          // User is not logged in, redirect to login
+          window.location.href = 'login.html';
+          throw new Error('Not authenticated');
+        }
+        return response.json();
+      })
+      .then(data => {
+        // Update user info
+        usernameElement.textContent = data.user.username;
+        userAvatar.textContent = data.user.username.charAt(0).toUpperCase();
+        
+        // Fetch conversations
+        return fetchConversations();
+      })
+      .catch(error => {
+        console.error('Error checking authentication:', error);
+      });
+      
+      // Fetch conversations
+      function fetchConversations() {
+        return fetch('/api/conversations', {
+          method: 'GET',
+          credentials: 'include'
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch conversations');
+          }
+          return response.json();
+        })
+        .then(data => {
+          renderConversations(data.conversations);
+        })
+        .catch(error => {
+          console.error('Error fetching conversations:', error);
+          conversationsContainer.innerHTML = `
+            <div class="empty-state">
+              <h2>Error loading conversations</h2>
+              <p>There was a problem loading your conversations. Please try again.</p>
+              <button class="primary-button" onclick="location.reload()">Retry</button>
+            </div>
+          `;
+        });
+      }
+      
+      // Debug function to show date debugging information
+      function debugDate(dateString) {
+        console.log('Date debug info:', {
+          input: dateString,
+          asDate: new Date(dateString),
+          timestamp: new Date(dateString).getTime(),
+          nowTimestamp: new Date().getTime(),
+          difference: new Date().getTime() - new Date(dateString).getTime()
+        });
+      }
+      
+      // Render conversations
+      function renderConversations(conversations) {
+        if (!conversations || conversations.length === 0) {
+          conversationsContainer.innerHTML = `
+            <div class="empty-state">
+              <h2>No conversations yet</h2>
+              <p>Start a new conversation with Claude using one of the options below:</p>
+              <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;">
+                <button class="primary-button" id="empty-pdf-chat">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                  </svg>
+                  Pro PDF Chat
+                </button>
+                <button class="secondary-button" id="empty-normal-chat">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  Normal Chat
+                </button>
+              </div>
+            </div>
+          `;
+          
+          document.getElementById('empty-pdf-chat').addEventListener('click', () => {
+            window.location.href = 'index.html';
+          });
+          
+          document.getElementById('empty-normal-chat').addEventListener('click', () => {
+            createNormalChat();
+          });
+          
+          return;
+        }
+        
+        // For debugging
+        // conversations.forEach(conv => debugDate(conv.updatedAt));
+        
+        const conversationsHTML = conversations.map(conversation => {
+          // Format the date properly for the conversation header
+          const date = new Date(conversation.updatedAt);
+          const formattedDate = date.toLocaleString(undefined, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          
+          return `
+            <div class="conversation-card" data-id="${conversation.id}">
+              <div class="conversation-header">
+                <div class="conversation-title">${conversation.title}</div>
+                <div class="conversation-date">${formattedDate}</div>
+              </div>
+              <div class="conversation-body">
+                <div class="conversation-stats">
+                  <div>${conversation.messageCount} messages</div>
+                  <div>Last updated: ${timeAgo(conversation.updatedAt)}</div>
+                </div>
+                <div class="conversation-actions" style="margin-top: 10px; text-align: right;">
+                  <button class="delete-conversation-btn" data-id="${conversation.id}" style="background: none; border: none; cursor: pointer; color: #e53e3e;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+        conversationsContainer.innerHTML = `
+          <div class="conversations-list">
+            ${conversationsHTML}
+          </div>
+        `;
+        
+        // Add event listeners to conversation cards
+        document.querySelectorAll('.conversation-card').forEach(card => {
+          card.addEventListener('click', (e) => {
+            // Only navigate if the click was not on the delete button
+            if (!e.target.closest('.delete-conversation-btn')) {
+              const conversationId = card.dataset.id;
+              window.location.href = `index.html?conversation=${conversationId}`;
+            }
+          });
+        });
+        
+        // Add event listeners to delete buttons
+        document.querySelectorAll('.delete-conversation-btn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.stopPropagation(); // Prevent triggering card click
+            
+            const conversationId = btn.dataset.id;
+            
+            // Confirm before deleting
+            if (confirm('Are you sure you want to delete this conversation? This action cannot be undone.')) {
+              try {
+                const response = await fetch(`/api/conversations/${conversationId}`, {
+                  method: 'DELETE',
+                  credentials: 'include'
+                });
+                
+                if (response.ok) {
+                  // Remove the card from UI
+                  const card = btn.closest('.conversation-card');
+                  card.style.opacity = '0';
+                  card.style.transform = 'scale(0.9)';
+                  card.style.transition = 'all 0.3s ease';
+                  
+                  // Wait for animation to complete then remove and fetch updated list
+                  setTimeout(() => {
+                    fetchConversations();
+                  }, 300);
+                } else {
+                  alert('Failed to delete conversation. Please try again.');
+                }
+              } catch (error) {
+                console.error('Error deleting conversation:', error);
+                alert('An error occurred. Please try again.');
+              }
+            }
+          });
+        });
+      }
+      
+      // Format time ago with improved timezone handling
+      function timeAgo(dateString) {
+        // Explicitly parse the date string to ensure proper handling
+        let date;
+        try {
+          // Try to parse the ISO string directly
+          date = new Date(dateString);
+          
+          // If the date is invalid, try alternative parsing
+          if (isNaN(date.getTime())) {
+            console.warn('Invalid date format, trying alternative parsing:', dateString);
+            
+            // Try to extract components if it's not a standard format
+            const parts = dateString.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+            if (parts) {
+              date = new Date(
+                parseInt(parts[1]), // year
+                parseInt(parts[2]) - 1, // month (0-indexed)
+                parseInt(parts[3]), // day
+                parseInt(parts[4]), // hour
+                parseInt(parts[5]), // minute
+                parseInt(parts[6])  // second
+              );
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing date:', e);
+          return 'recently'; // Fallback
+        }
+        
+        // If we still have an invalid date, return a generic message
+        if (isNaN(date.getTime())) {
+          console.error('Unable to parse date:', dateString);
+          return 'recently';
+        }
+        
+        // Get current time
+        const now = new Date();
+        
+        // Calculate time difference in seconds
+        const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+        
+        // Guard against future dates or incorrect system clock
+        if (seconds < 0) {
+          console.warn('Negative time difference detected:', seconds);
+          return 'just now';
+        }
+        
+        // Now calculate the appropriate time unit
+        let interval = Math.floor(seconds / 31536000);
+        if (interval > 1) return interval + ' years ago';
+        if (interval === 1) return '1 year ago';
+        
+        interval = Math.floor(seconds / 2592000);
+        if (interval > 1) return interval + ' months ago';
+        if (interval === 1) return '1 month ago';
+        
+        interval = Math.floor(seconds / 86400);
+        if (interval > 1) return interval + ' days ago';
+        if (interval === 1) return '1 day ago';
+        
+        interval = Math.floor(seconds / 3600);
+        if (interval > 1) return interval + ' hours ago';
+        if (interval === 1) return '1 hour ago';
+        
+        interval = Math.floor(seconds / 60);
+        if (interval > 1) return interval + ' minutes ago';
+        if (interval === 1) return '1 minute ago';
+        
+        return 'just now';
+      }
+      
+      // Create a normal chat conversation
+      async function createNormalChat() {
+        try {
+          const response = await fetch('/api/conversations/create-empty', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              title: 'New Chat'
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to create normal chat');
+          }
+          
+          const data = await response.json();
+          window.location.href = `index.html?conversation=${data.conversationId}`;
+        } catch (error) {
+          console.error('Error creating normal chat:', error);
+          alert('Failed to create new chat. Please try again.');
+        }
+      }
+      
+      // Handle chat options
+      document.getElementById('new-pdf-chat').addEventListener('click', () => {
+        window.location.href = 'index.html';
+      });
+      
+      document.getElementById('new-normal-chat').addEventListener('click', () => {
+        createNormalChat();
+      });
+      
+      // Main New Chat button with dropdown toggle
+      newChatButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Toggle dropdown visibility
+        const dropdown = document.querySelector('.dropdown-content');
+        dropdown.classList.toggle('show');
+      });
+      
+      // Close dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        const dropdown = document.querySelector('.dropdown-content');
+        if (dropdown.classList.contains('show') && !e.target.closest('.dropdown')) {
+          dropdown.classList.remove('show');
+        }
+      });
+      
+      // Logout button
+      logoutButton.addEventListener('click', async () => {
+        try {
+          const response = await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include'
+          });
+          
+          if (response.ok) {
+            window.location.href = 'login.html';
+          }
+        } catch (error) {
+          console.error('Logout error:', error);
+        }
+      });
+    });
+  </script>
+  <script src="creator-animation.js"></script>
+  <script src="particles-background.js"></script>
+  <script src="performance-utils.js"></script>
+</body>
+</html>
