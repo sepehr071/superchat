@@ -167,6 +167,8 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
           
           * {
             font-family: 'Vazirmatn', Tahoma, Arial, sans-serif !important;
+            direction: rtl !important;
+            unicode-bidi: embed;
           }
           
           table {
@@ -176,6 +178,7 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
             direction: rtl;
             text-align: right;
             border: 2px solid #4a4a57;
+            table-layout: fixed;
           }
           
           th {
@@ -183,14 +186,32 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
             color: white;
             font-weight: bold;
             border-bottom: 2px solid #a855f7;
-            text-align: right;
+            text-align: center;
             padding: 12px 15px;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            word-break: keep-all;
+            line-height: 1.5;
+            white-space: normal;
           }
           
           td {
             border: 1px solid #4a4a57;
             padding: 12px 15px;
-            text-align: right;
+            text-align: center;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            word-break: keep-all;
+            line-height: 1.5;
+            white-space: normal;
+          }
+          
+          /* Fix for long words in Persian */
+          th, td {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+            position: relative;
           }
           
           tr:nth-child(odd) {
@@ -207,14 +228,40 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
           table[dir="rtl"],
           table[dir="rtl"] th,
           table[dir="rtl"] td {
-            text-align: right !important;
+            text-align: center !important;
             direction: rtl !important;
+          }
+          
+          /* Fix for Persian table headers specifically */
+          [lang="fa"] th,
+          [dir="rtl"] th {
+            text-align: center;
+            vertical-align: middle;
+          }
+          
+          /* Fix for RTL text in cells */
+          [lang="fa"] td,
+          [dir="rtl"] td {
+            text-align: center;
+            vertical-align: middle;
+          }
+
+          /* Overrides for specific tables */
+          .comparison-table th:first-child,
+          .comparison-table td:first-child {
+            position: sticky;
+            right: 0;
+            background-color: #333340;
+            z-index: 2;
           }
         </style>
       </head>
       <body>
-        <div dir="rtl" lang="fa">
-          ${tableHtml.replace(/<table/g, '<table dir="rtl"')}
+        <div dir="rtl" lang="fa" class="table-container">
+          ${tableHtml
+            .replace(/<table/g, '<table dir="rtl" lang="fa" class="comparison-table"')
+            .replace(/<th/g, '<th dir="rtl" lang="fa"')
+            .replace(/<td/g, '<td dir="rtl" lang="fa"')}
         </div>
         
         <script>
@@ -224,19 +271,44 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
           document.body.dir = 'rtl';
           document.body.lang = 'fa';
           
-          // Apply RTL to all tables, table headers, and table cells
-          const tables = document.querySelectorAll('table');
-          tables.forEach(table => {
-            table.dir = 'rtl';
-            table.setAttribute('lang', 'fa');
-            
-            const cells = table.querySelectorAll('th, td');
-            cells.forEach(cell => {
-              cell.dir = 'rtl';
-              cell.setAttribute('lang', 'fa');
-              cell.style.textAlign = 'right';
+          // Fix Persian text display in tables
+          function fixPersianTable() {
+            const tables = document.querySelectorAll('table');
+            tables.forEach(table => {
+              table.dir = 'rtl';
+              table.setAttribute('lang', 'fa');
+              
+              // Fix all cells
+              const cells = table.querySelectorAll('th, td');
+              cells.forEach(cell => {
+                // Ensure RTL attributes
+                cell.dir = 'rtl';
+                cell.setAttribute('lang', 'fa');
+                cell.style.textAlign = 'center';
+                
+                // Get the cell text content
+                let text = cell.innerHTML;
+                
+                // Fix parentheses position - e.g., "(CR7) کریستیانو رونالدو" to "کریستیانو رونالدو (CR7)"
+                text = text.replace(/\(([^)]+)\)\s+([^<]+)/g, '$2 ($1)');
+                
+                // Fix number phrases - e.g., "730 از بیش" to "بیش از 730"
+                text = text.replace(/(\d+)\s+از\s+بیش/g, 'بیش از $1');
+                
+                // Fix "بیشترین در تاریخ" phrases that might be reversed
+                text = text.replace(/\(([^)]*بیشترین در تاریخ[^)]*)\)/g, '(بیشترین در تاریخ)');
+                
+                // Apply the fixed text
+                cell.innerHTML = text;
+              });
             });
-          });
+          }
+          
+          // Run the fix immediately
+          fixPersianTable();
+          
+          // Run again after a delay to ensure all content is processed
+          setTimeout(fixPersianTable, 500);
         </script>
       </body>
       </html>
@@ -254,7 +326,7 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
       console.log(`Created temporary HTML file at ${tempHtmlPath}`);
       
       // Use wkhtmltopdf to generate PDF (must be installed on the system)
-      const cmd = `wkhtmltopdf --encoding utf-8 --enable-local-file-access --javascript-delay 1000 --no-stop-slow-scripts --enable-javascript ${tempHtmlPath} ${tempPdfPath}`;
+      const cmd = `wkhtmltopdf --encoding utf-8 --enable-local-file-access --javascript-delay 2000 --no-stop-slow-scripts --enable-javascript --dpi 300 --margin-left 0 --margin-right 0 --margin-top 10 --margin-bottom 10 ${tempHtmlPath} ${tempPdfPath}`;
       console.log(`Executing command: ${cmd}`);
       
       await execPromise(cmd);
