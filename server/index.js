@@ -108,8 +108,11 @@ app.post('/api/conversations/create-empty', authenticateUser, (req, res) => {
   }
 });
 
-// Import puppeteer for PDF generation
-const puppeteer = require('puppeteer');
+// Import html-to-pdf-js for PDF generation (more compatible with ARM architecture)
+const fs = require('fs').promises;
+const { exec } = require('child_process');
+const util = require('util');
+const execPromise = util.promisify(exec);
 
 // PDF Export endpoint
 app.post('/api/export-table', authenticateUser, async (req, res) => {
@@ -211,91 +214,32 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
       </html>
     `;
     
-    // Launch puppeteer browser with enhanced Ubuntu compatibility
-    const browser = await puppeteer.launch({
-      headless: 'new',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--disable-gpu'
-      ]
-    });
-    
+    // Alternative approach using wkhtmltopdf which works better on ARM
     try {
-      const page = await browser.newPage();
+      // Create a temp HTML file
+      const tempHtmlPath = `/tmp/table-${uniqueFilename}.html`;
+      const tempPdfPath = `/tmp/table-${uniqueFilename}.pdf`;
       
-      // Set content and generate PDF
-      await page.setContent(htmlContent);
+      // Write the HTML content to the temp file
+      await fs.writeFile(tempHtmlPath, htmlContent);
       
-      // Wait for Vazir font to load properly and apply RTL classes using JavaScript
-      await page.evaluateHandle(() => {
-        return new Promise((resolve) => {
-          // Apply RTL detection for Persian text
-          function detectPersianAndApplyRTL() {
-            // Detect Persian text in table cells and apply RTL
-            const persianRegex = /[\u0600-\u06FF]/;
-            
-            // Check if body contains Persian text
-            if (persianRegex.test(document.body.innerText)) {
-              document.body.classList.add('rtl');
-            }
-            
-            // Process table cells
-            const cells = document.querySelectorAll('th, td');
-            cells.forEach(cell => {
-              if (persianRegex.test(cell.innerText)) {
-                cell.classList.add('rtl-cell');
-              }
-            });
-          }
-          
-          // Wait for fonts to load first
-          if (document.fonts && document.fonts.ready) {
-            document.fonts.ready.then(() => {
-              detectPersianAndApplyRTL();
-              // Add a small delay to ensure font rendering and script execution
-              setTimeout(resolve, 800);
-            });
-          } else {
-            // Fallback if document.fonts.ready is not available
-            setTimeout(() => {
-              detectPersianAndApplyRTL();
-              resolve();
-            }, 1200);
-          }
-        });
-      });
+      console.log(`Created temporary HTML file at ${tempHtmlPath}`);
       
-      // Generate PDF with proper font embedding
-      const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        preferCSSPageSize: true,
-        displayHeaderFooter: false,
-        margin: {
-          top: '20px',
-          right: '20px',
-          bottom: '20px',
-          left: '20px'
-        }
-      });
+      // Use wkhtmltopdf to generate PDF (must be installed on the system)
+      const cmd = `wkhtmltopdf --encoding utf-8 --enable-local-file-access ${tempHtmlPath} ${tempPdfPath}`;
+      console.log(`Executing command: ${cmd}`);
       
-      // Log successful PDF generation
-      console.log('PDF Buffer generated successfully:', {
-        size: pdfBuffer.length,
-        browserVersion: await browser.version()
-      });
+      await execPromise(cmd);
+      console.log(`PDF generated at ${tempPdfPath}`);
       
-      // Close browser
-      await browser.close();
+      // Read the generated PDF
+      const pdfBuffer = await fs.readFile(tempPdfPath);
+      console.log(`PDF Buffer read successfully - size: ${pdfBuffer.length} bytes`);
       
       // Set appropriate headers for PDF download
       res.setHeader('Content-Type', 'application/pdf');
       
-      // Format Content-Disposition header according to RFC 6266 for better browser compatibility
-      // Both filename and filename* parameters are included for wider compatibility
+      // Format Content-Disposition header
       const encodedFilename = encodeURIComponent(uniqueFilename);
       res.setHeader(
         'Content-Disposition',
@@ -304,12 +248,19 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
       
       res.setHeader('Content-Length', pdfBuffer.length);
       
-      // Send the PDF buffer directly without using express's res.send()
-      // which can sometimes modify binary data
+      // Send the PDF
       res.end(pdfBuffer);
+      
+      // Clean up temp files
+      try {
+        await fs.unlink(tempHtmlPath);
+        await fs.unlink(tempPdfPath);
+        console.log('Temporary files cleaned up');
+      } catch (cleanupError) {
+        console.error('Error cleaning up temp files:', cleanupError);
+      }
     } catch (innerError) {
-      console.error('Error during PDF generation with Puppeteer:', innerError);
-      await browser.close();
+      console.error('Error during PDF generation with wkhtmltopdf:', innerError);
       throw innerError;
     }
   } catch (error) {
