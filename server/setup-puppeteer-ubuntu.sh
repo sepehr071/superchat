@@ -2,6 +2,7 @@
 #
 # SuperChat Puppeteer Setup Script for Ubuntu
 # This script sets up all required dependencies for running the Puppeteer PDF service on Ubuntu
+# Compatible with Ubuntu 22.04+ and older versions
 #
 
 # Text formatting
@@ -35,6 +36,20 @@ function show_progress() {
   echo -e "${BLUE}==>${RESET} ${BOLD}$1${RESET}"
 }
 
+# Function to detect Ubuntu version
+function detect_ubuntu_version() {
+  if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    UBUNTU_VERSION=$VERSION_ID
+    echo -e "${BLUE}Detected Ubuntu $UBUNTU_VERSION${RESET}"
+    return 0
+  else
+    echo -e "${YELLOW}Could not detect Ubuntu version, assuming latest${RESET}"
+    UBUNTU_VERSION="latest"
+    return 1
+  fi
+}
+
 # Function to handle errors
 function handle_error() {
   echo -e "${RED}ERROR: $1${RESET}"
@@ -46,46 +61,62 @@ function handle_error() {
 show_progress "Updating package list..."
 apt-get update || handle_error "Failed to update package list"
 
-# Install Chromium/Chrome dependencies
-show_progress "Installing Chrome dependencies..."
-apt-get install -y \
-    ca-certificates \
-    fonts-liberation \
-    libappindicator3-1 \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libc6 \
-    libcairo2 \
-    libcups2 \
-    libdbus-1-3 \
-    libexpat1 \
-    libfontconfig1 \
-    libgbm1 \
-    libgcc1 \
-    libglib2.0-0 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libstdc++6 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxcb1 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxi6 \
-    libxrandr2 \
-    libxrender1 \
-    libxss1 \
-    libxtst6 \
-    lsb-release \
-    wget \
-    xdg-utils || handle_error "Failed to install Chrome dependencies"
+# Detect Ubuntu version to handle package differences
+detect_ubuntu_version
+
+# Install Chrome dependencies
+show_progress "Installing Chrome dependencies for Ubuntu $UBUNTU_VERSION..."
+
+# Common packages for all Ubuntu versions
+COMMON_PACKAGES="ca-certificates fonts-liberation libdbus-1-3 libexpat1 libfontconfig1 libgbm1 libnspr4 libnss3 libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 lsb-release wget xdg-utils"
+
+# For Ubuntu 22.04+ with t64 suffix
+if [[ "$UBUNTU_VERSION" == "22.04" || "$UBUNTU_VERSION" == "23.04" || "$UBUNTU_VERSION" == "23.10" || "$UBUNTU_VERSION" == "24.04" || "$UBUNTU_VERSION" == "latest" ]]; then
+  show_progress "Using package names for Ubuntu 22.04+ (with t64 suffix)..."
+  
+  # Try installing common packages first
+  apt-get install -y $COMMON_PACKAGES || echo -e "${YELLOW}Warning: Some common packages could not be installed${RESET}"
+  
+  # Try to install libasound2 with proper suffix
+  apt-get install -y libasound2t64 || {
+    echo -e "${YELLOW}Warning: Could not install libasound2t64, trying alternative...${RESET}"
+    apt-get install -y liboss4-salsa-asound2 || {
+      echo -e "${YELLOW}Warning: Could not install audio libraries, continuing anyway...${RESET}"
+    }
+  }
+  
+  # Install t64 packages individually to continue on errors
+  apt-get install -y libatk-bridge2.0-0t64 || echo -e "${YELLOW}Warning: Could not install libatk-bridge2.0-0t64${RESET}"
+  apt-get install -y libatk1.0-0t64 || echo -e "${YELLOW}Warning: Could not install libatk1.0-0t64${RESET}"
+  apt-get install -y libc6 || echo -e "${YELLOW}Warning: Could not install libc6${RESET}"
+  apt-get install -y libcairo2 || echo -e "${YELLOW}Warning: Could not install libcairo2${RESET}"
+  apt-get install -y libcups2t64 || echo -e "${YELLOW}Warning: Could not install libcups2t64${RESET}"
+  apt-get install -y libgcc-s1 || echo -e "${YELLOW}Warning: Could not install libgcc-s1${RESET}"
+  apt-get install -y libglib2.0-0t64 || echo -e "${YELLOW}Warning: Could not install libglib2.0-0t64${RESET}"
+  apt-get install -y libgtk-3-0t64 || echo -e "${YELLOW}Warning: Could not install libgtk-3-0t64${RESET}"
+  
+else
+  # For older Ubuntu versions (pre-22.04)
+  show_progress "Using package names for older Ubuntu versions..."
+  
+  # Install packages for older Ubuntu
+  apt-get install -y $COMMON_PACKAGES || echo -e "${YELLOW}Warning: Some common packages could not be installed${RESET}"
+  
+  apt-get install -y libappindicator3-1 || echo -e "${YELLOW}Warning: Could not install libappindicator3-1${RESET}"
+  apt-get install -y libasound2 || echo -e "${YELLOW}Warning: Could not install libasound2${RESET}"
+  apt-get install -y libatk-bridge2.0-0 || echo -e "${YELLOW}Warning: Could not install libatk-bridge2.0-0${RESET}"
+  apt-get install -y libatk1.0-0 || echo -e "${YELLOW}Warning: Could not install libatk1.0-0${RESET}"
+  apt-get install -y libc6 || echo -e "${YELLOW}Warning: Could not install libc6${RESET}"
+  apt-get install -y libcairo2 || echo -e "${YELLOW}Warning: Could not install libcairo2${RESET}"
+  apt-get install -y libcups2 || echo -e "${YELLOW}Warning: Could not install libcups2${RESET}"
+  apt-get install -y libgcc1 || echo -e "${YELLOW}Warning: Could not install libgcc1${RESET}"
+  apt-get install -y libglib2.0-0 || echo -e "${YELLOW}Warning: Could not install libglib2.0-0${RESET}"
+  apt-get install -y libgtk-3-0 || echo -e "${YELLOW}Warning: Could not install libgtk-3-0${RESET}"
+fi
+
+echo -e "${GREEN}Chrome dependencies installation completed.${RESET}"
+echo -e "${YELLOW}Note: Some packages may not have installed correctly depending on your Ubuntu version,${RESET}"
+echo -e "${YELLOW}but we'll continue with the setup process.${RESET}"
 
 # Install Chrome browser if not already installed
 if ! which google-chrome &>/dev/null; then
@@ -101,11 +132,15 @@ fi
 
 # Install Persian fonts
 show_progress "Installing Persian fonts..."
-apt-get install -y fonts-farsiweb fonts-noto-cjk || handle_error "Failed to install Persian fonts"
+apt-get install -y fonts-farsiweb || echo -e "${YELLOW}Warning: Could not install fonts-farsiweb${RESET}"
+apt-get install -y fonts-noto-cjk || echo -e "${YELLOW}Warning: Could not install fonts-noto-cjk${RESET}"
+
+# Try alternative fonts if primary fonts fail
+apt-get install -y fonts-noto || echo -e "${YELLOW}Warning: Could not install fonts-noto${RESET}"
 
 # Refresh font cache
 show_progress "Updating font cache..."
-fc-cache -fv || handle_error "Failed to update font cache"
+fc-cache -fv || echo -e "${YELLOW}Warning: Failed to update font cache${RESET}"
 
 # Set up environment variable
 CHROME_BIN=$(which google-chrome)
@@ -156,12 +191,20 @@ fi
 
 # Verify Chrome can run in headless mode
 show_progress "Verifying Chrome headless functionality..."
-su -c "$CHROME_BIN --headless --disable-gpu --no-sandbox --dump-dom https://www.google.com > /dev/null 2>&1" - $SUDO_USER
-if [ $? -eq 0 ]; then
+if [ -n "$SUDO_USER" ]; then
+  su -c "$CHROME_BIN --headless=new --disable-gpu --no-sandbox --dump-dom https://www.google.com > /dev/null 2>&1" - $SUDO_USER
+  CHROME_TEST_RESULT=$?
+else
+  $CHROME_BIN --headless=new --disable-gpu --no-sandbox --dump-dom https://www.google.com > /dev/null 2>&1
+  CHROME_TEST_RESULT=$?
+fi
+
+if [ $CHROME_TEST_RESULT -eq 0 ]; then
   echo -e "${GREEN}Chrome headless mode is working correctly.${RESET}"
 else
   echo -e "${YELLOW}Warning: Chrome headless test failed. This may affect PDF generation.${RESET}"
   echo -e "${YELLOW}You may need to troubleshoot Chrome using the guidelines in the documentation.${RESET}"
+  echo -e "${YELLOW}Continuing with setup despite this warning...${RESET}"
 fi
 
 # Set Node.js options for better performance
@@ -192,26 +235,56 @@ fi
 # Create simple test script
 cat > /tmp/puppeteer-test/test.js << 'EOF'
 const puppeteer = require('puppeteer');
+const path = require('path');
 
 async function test() {
   console.log('Starting Puppeteer test...');
   
-  const browser = await puppeteer.launch({
+  const options = {
     headless: 'new',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage'
+      '--disable-dev-shm-usage',
+      '--disable-gpu'
     ]
-  });
+  };
+  
+  // Add executablePath if CHROME_BIN is set
+  if (process.env.CHROME_BIN) {
+    options.executablePath = process.env.CHROME_BIN;
+    console.log(`Using Chrome binary: ${process.env.CHROME_BIN}`);
+  }
+  
+  const browser = await puppeteer.launch(options);
   
   console.log('Browser launched successfully');
   
   const page = await browser.newPage();
   console.log('Page created successfully');
   
-  await page.setContent('<h1>Puppeteer Test</h1><p>Persian: سلام دنیا</p>');
+  await page.setContent(`<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+  <meta charset="UTF-8">
+  <title>Puppeteer Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; }
+    .persian { font-family: 'Vazirmatn', Tahoma, Arial, sans-serif; }
+  </style>
+</head>
+<body>
+  <h1>Puppeteer Test</h1>
+  <p class="persian">Persian: سلام دنیا</p>
+</body>
+</html>`);
+  
   console.log('Content set successfully');
+  
+  // Try to take a screenshot to test rendering
+  const screenshotPath = path.join('/tmp/puppeteer-test', 'test-screenshot.png');
+  await page.screenshot({ path: screenshotPath });
+  console.log(`Screenshot saved to: ${screenshotPath}`);
   
   await browser.close();
   console.log('Test completed successfully');
@@ -225,8 +298,12 @@ EOF
 
 # Run test if puppeteer is installed
 if [ -d "/usr/local/lib/node_modules/puppeteer" ] || [ -d "node_modules/puppeteer" ]; then
-  echo "Puppeteer found, running test..."
-  node /tmp/puppeteer-test/test.js
+  show_progress "Puppeteer found, running test..."
+  # Ensure CHROME_BIN is available in the environment for the test
+  CHROME_BIN=$CHROME_BIN node /tmp/puppeteer-test/test.js || {
+    echo -e "${YELLOW}Puppeteer test failed but we'll continue with setup.${RESET}"
+    echo -e "${YELLOW}See /tmp/puppeteer-test/test.js for test details.${RESET}"
+  }
 else
   echo -e "${YELLOW}Puppeteer not found globally or in current directory.${RESET}"
   echo -e "${YELLOW}Test script created at /tmp/puppeteer-test/test.js${RESET}"
@@ -236,8 +313,8 @@ fi
 # Summary
 echo -e "\n${BOLD}${GREEN}Setup Complete!${RESET}"
 echo -e "${BOLD}Summary:${RESET}"
-echo -e "- ${GREEN}Chrome and dependencies installed${RESET}"
-echo -e "- ${GREEN}Persian fonts installed and font cache updated${RESET}"
+echo -e "- ${GREEN}Chrome dependencies installed (with compatibility for Ubuntu $UBUNTU_VERSION)${RESET}"
+echo -e "- ${GREEN}Persian fonts installed where available${RESET}"
 echo -e "- ${GREEN}CHROME_BIN environment variable set to: $CHROME_BIN${RESET}"
 echo -e "- ${GREEN}Node.js performance options configured${RESET}"
 
@@ -249,6 +326,10 @@ echo -e "\n${BOLD}Next Steps:${RESET}"
 echo -e "1. ${BLUE}Source your environment variables:${RESET} source ~/.bashrc"
 echo -e "2. ${BLUE}Restart your application to apply all changes${RESET}"
 echo -e "3. ${BLUE}If you encounter any issues, refer to the troubleshooting guide:${RESET}"
-echo -e "   ${BLUE}server/docs/ubuntu-puppeteer-guide.md${RESET}"
+echo -e "   ${BLUE}server/docs/ubuntu-puppeteer-guide.md${RESET}\n"
+
+echo -e "${YELLOW}Note: If you encounter any package issues specific to your Ubuntu version,${RESET}"
+echo -e "${YELLOW}you may need to manually install some packages or adapt the commands.${RESET}"
+echo -e "${YELLOW}This script is designed to work with both newer (22.04+) and older Ubuntu versions.${RESET}"
 
 echo -e "\n${BOLD}${BLUE}Thank you for using SuperChat!${RESET}"
