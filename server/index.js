@@ -211,10 +211,16 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
       </html>
     `;
     
-    // Launch puppeteer browser
+    // Launch puppeteer browser with enhanced Ubuntu compatibility
     const browser = await puppeteer.launch({
       headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu'
+      ]
     });
     
     try {
@@ -276,6 +282,12 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
         }
       });
       
+      // Log successful PDF generation
+      console.log('PDF Buffer generated successfully:', {
+        size: pdfBuffer.length,
+        browserVersion: await browser.version()
+      });
+      
       // Close browser
       await browser.close();
       
@@ -301,8 +313,11 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
       throw innerError;
     }
   } catch (error) {
-    console.error('Error generating PDF:', error);
-    res.status(500).json({ error: 'Failed to generate PDF' });
+    console.error('Error generating PDF:', error.name, error.message, error.stack);
+    res.status(500).json({
+      error: 'Failed to generate PDF',
+      details: `${error.name}: ${error.message}`
+    });
   }
 });
 
