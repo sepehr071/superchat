@@ -133,85 +133,111 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
     // Create a complete HTML document with proper styling
     const htmlContent = `
       <!DOCTYPE html>
-      <html>
+      <html dir="rtl" lang="fa">
       <head>
         <meta charset="UTF-8">
         <title>Table Export</title>
         <!-- Import Vazir font for Persian text support -->
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
         <style>
           @font-face {
             font-family: 'Vazirmatn';
-            src: url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap');
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2');
             font-weight: normal;
             font-style: normal;
+            font-display: swap;
           }
           
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+          @font-face {
+            font-family: 'Vazirmatn';
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Bold.woff2') format('woff2');
+            font-weight: bold;
+            font-style: normal;
+            font-display: swap;
+          }
+          
+          html, body {
+            direction: rtl;
+            text-align: right;
+            font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;
             color: #333;
             padding: 20px;
+            background-color: white;
           }
           
-          /* RTL and Persian text support - more compatible selectors */
-          :lang(fa), :lang(ar), [dir="rtl"] {
-            font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          }
-          
-          /* Apply Vazir font and RTL for Persian content */
-          .rtl-text {
-            direction: rtl;
-            text-align: right;
-            font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          }
-          
-          /* Add a script to detect Persian text and apply RTL class */
-          body.rtl {
-            direction: rtl;
-            text-align: right;
+          * {
+            font-family: 'Vazirmatn', Tahoma, Arial, sans-serif !important;
           }
           
           table {
             border-collapse: collapse;
             width: 100%;
             margin: 0 auto;
+            direction: rtl;
+            text-align: right;
+            border: 2px solid #4a4a57;
           }
           
           th {
             background-color: #333340;
-            color: #f0f0f0;
-            font-weight: 600;
+            color: white;
+            font-weight: bold;
             border-bottom: 2px solid #a855f7;
-            text-align: left;
-            padding: 10px 12px;
+            text-align: right;
+            padding: 12px 15px;
           }
           
           td {
             border: 1px solid #4a4a57;
-            padding: 10px 12px;
-            text-align: left;
-          }
-          
-          /* Fallback to use JavaScript to apply RTL */
-          .rtl-cell {
+            padding: 12px 15px;
             text-align: right;
-            direction: rtl;
-            font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           }
           
           tr:nth-child(odd) {
             background-color: #28282f;
-            color: #f0f0f0;
+            color: white;
           }
           
           tr:nth-child(even) {
             background-color: #222228;
-            color: #f0f0f0;
+            color: white;
+          }
+          
+          /* Extra specificity to ensure RTL is applied */
+          table[dir="rtl"],
+          table[dir="rtl"] th,
+          table[dir="rtl"] td {
+            text-align: right !important;
+            direction: rtl !important;
           }
         </style>
       </head>
       <body>
-        ${tableHtml}
+        <div dir="rtl" lang="fa">
+          ${tableHtml.replace(/<table/g, '<table dir="rtl"')}
+        </div>
+        
+        <script>
+          // Force RTL and language for Persian text
+          document.documentElement.dir = 'rtl';
+          document.documentElement.lang = 'fa';
+          document.body.dir = 'rtl';
+          document.body.lang = 'fa';
+          
+          // Apply RTL to all tables, table headers, and table cells
+          const tables = document.querySelectorAll('table');
+          tables.forEach(table => {
+            table.dir = 'rtl';
+            table.setAttribute('lang', 'fa');
+            
+            const cells = table.querySelectorAll('th, td');
+            cells.forEach(cell => {
+              cell.dir = 'rtl';
+              cell.setAttribute('lang', 'fa');
+              cell.style.textAlign = 'right';
+            });
+          });
+        </script>
       </body>
       </html>
     `;
@@ -228,7 +254,7 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
       console.log(`Created temporary HTML file at ${tempHtmlPath}`);
       
       // Use wkhtmltopdf to generate PDF (must be installed on the system)
-      const cmd = `wkhtmltopdf --encoding utf-8 --enable-local-file-access ${tempHtmlPath} ${tempPdfPath}`;
+      const cmd = `wkhtmltopdf --encoding utf-8 --enable-local-file-access --javascript-delay 1000 --no-stop-slow-scripts --enable-javascript ${tempHtmlPath} ${tempPdfPath}`;
       console.log(`Executing command: ${cmd}`);
       
       await execPromise(cmd);
