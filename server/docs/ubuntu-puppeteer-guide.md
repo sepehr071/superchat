@@ -1,55 +1,28 @@
-# Ubuntu Puppeteer Compatibility Guide
+# Ubuntu Server Deployment Guide for SuperChat
 
-## Overview 
+This guide provides detailed instructions for deploying SuperChat on Ubuntu Server, including specific configurations to prevent the 502 Bad Gateway errors and segmentation faults that can occur with Puppeteer/Chrome.
 
-This guide provides instructions for running the Puppeteer PDF service on Ubuntu systems across different architectures. While the service works out-of-the-box on Windows, Ubuntu requires additional configuration to ensure proper operation.
+## System Requirements
 
-## Automated Setup (Recommended)
+- Ubuntu Server 20.04 LTS or newer
+- At least 2GB RAM (4GB recommended)
+- At least 10GB free disk space
+- Node.js 16+ installed
 
-The easiest way to set up your Ubuntu environment is to use our automated setup script:
+## 1. Required Dependencies
 
-```bash
-sudo chmod +x server/setup-puppeteer-ubuntu.sh
-sudo ./server/setup-puppeteer-ubuntu.sh
-```
+Install the necessary dependencies for Chrome/Puppeteer:
 
-This script automatically:
-- Detects your Ubuntu version and architecture (AMD64 or ARM)
-- Installs the appropriate packages for your system
-- Sets up environment variables
-- Configures Persian font support
-- Verifies the installation
-
-After running the script, source your environment variables:
-```bash
-source ~/.bashrc
-```
-
-## Architecture-Specific Considerations
-
-### AMD64 (x86_64) Architecture
-
-On AMD64 systems (standard Intel/AMD processors), the setup uses Google Chrome by default and generally has the best compatibility.
-
-### ARM64 Architecture
-
-On ARM systems (like Raspberry Pi, some cloud VMs, Apple M1/M2), the setup uses Chromium instead of Chrome. ARM systems have some specific considerations:
-
-- Always set the `PUPPETEER_EXECUTABLE_PATH` environment variable to point to your Chromium binary
-- Some advanced Chrome features may have limited support on ARM
-- Performance may be slower than on equivalent AMD64 systems
-- Ensure ARM-specific graphics libraries are installed
-
-## Manual Installation Instructions
-
-### AMD64 Architecture Dependencies
+### For x86_64 Architecture
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y \
+# Update package lists
+sudo apt update
+
+# Install required dependencies
+sudo apt install -y \
     ca-certificates \
     fonts-liberation \
-    libappindicator3-1 \
     libasound2 \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
@@ -84,30 +57,35 @@ sudo apt-get install -y \
     lsb-release \
     wget \
     xdg-utils
+
+# Install Google Chrome
+wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+sudo apt update
+sudo apt install -y google-chrome-stable
 ```
 
-### ARM Architecture Dependencies
-
-For ARM systems, use these packages:
+### For ARM64 Architecture
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y \
-    chromium-browser \
+# Install ARM64-specific packages
+sudo apt update
+sudo apt install -y \
     ca-certificates \
     fonts-liberation \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
+    libasound2t64 \
+    libatk-bridge2.0-0t64 \
+    libatk1.0-0t64 \
     libc6 \
     libcairo2 \
-    libcups2 \
+    libcups2t64 \
     libdbus-1-3 \
     libexpat1 \
     libfontconfig1 \
     libgbm1 \
-    libglib2.0-0 \
-    libgtk-3-0 \
+    libgcc-s1 \
+    libglib2.0-0t64 \
+    libgtk-3-0t64 \
     libnspr4 \
     libnss3 \
     libpango-1.0-0 \
@@ -119,247 +97,315 @@ sudo apt-get install -y \
     libxdamage1 \
     libxext6 \
     libxfixes3 \
-    libxtst6
+    libxtst6 \
+    wget \
+    xdg-utils \
+    chromium-browser
 ```
 
-### Font Configuration for Persian
+## 2. Memory Configuration
 
-Persian text rendering requires proper font support:
+The PDF generation process requires more memory than typical Node.js operations. Set up additional swap space:
 
 ```bash
-# Install Persian fonts
-sudo apt-get install fonts-farsiweb fonts-noto-cjk
-
-# Alternative fonts if the above are not available
-sudo apt-get install fonts-noto
-
-# Refresh font cache
-fc-cache -fv
-```
-
-### Environment Variable Configuration
-
-For AMD64 architecture:
-
-```bash
-# Find Chrome path
-which google-chrome
-
-# Add to environment variables (add to your .bashrc or .profile)
-export CHROME_BIN=$(which google-chrome)
-```
-
-For ARM architecture:
-
-```bash
-# Find Chromium path
-which chromium-browser
-
-# Add to environment variables (add to your .bashrc or .profile)
-export CHROME_BIN=$(which chromium-browser)
-export PUPPETEER_EXECUTABLE_PATH=$(which chromium-browser)  # Important for ARM!
-```
-
-## Docker Deployment
-
-### AMD64 Docker Deployment
-
-For AMD64 architectures:
-
-```Dockerfile
-FROM node:16
-
-# Install dependencies
-RUN apt-get update && apt-get install -y \
-    wget gnupg ca-certificates \
-    fonts-liberation fonts-noto-cjk fonts-farsiweb \
-    libasound2 libatk1.0-0 libatk-bridge2.0-0 libcairo2 libcups2 libdbus-1-3 \
-    libexpat1 libfontconfig1 libgbm1 libglib2.0-0 libgtk-3-0 libnspr4 libnss3 \
-    libpango-1.0-0 libpangocairo-1.0-0 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 \
-    libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 \
-    libxss1 libxtst6 xdg-utils
-
-# Install Chrome
-RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set environment variable for Puppeteer
-ENV CHROME_BIN=/usr/bin/google-chrome
-
-# Create app directory and set as working directory
-WORKDIR /app
-
-# Copy project files
-COPY . .
-
-# Install dependencies
-RUN npm install
-
-# Expose port
-EXPOSE 5050
-
-# Start server
-CMD ["node", "index.js"]
-```
-
-### ARM Docker Deployment
-
-For ARM architectures:
-
-```Dockerfile
-FROM node:16
-
-# Install dependencies
-RUN apt-get update && apt-get install -y \
-    wget ca-certificates \
-    fonts-liberation fonts-noto-cjk fonts-farsiweb \
-    chromium-browser \
-    libasound2 libatk1.0-0 libatk-bridge2.0-0 libcairo2 libcups2 libdbus-1-3 \
-    libexpat1 libfontconfig1 libgbm1 libglib2.0-0 libgtk-3-0 libnspr4 libnss3 \
-    libpango-1.0-0 libpangocairo-1.0-0 libx11-6 libxcb1 libxcomposite1 \
-    libxdamage1 libxext6 libxfixes3 libxtst6 xdg-utils
-
-# Set environment variable for Puppeteer
-ENV CHROME_BIN=/usr/bin/chromium-browser
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-
-# Create app directory and set as working directory
-WORKDIR /app
-
-# Copy project files
-COPY . .
-
-# Install dependencies
-RUN npm install
-
-# Expose port
-EXPOSE 5050
-
-# Start server
-CMD ["node", "index.js"]
-```
-
-## Performance Optimization
-
-### Memory Allocation
-
-For AMD64 systems:
-
-```bash
-# Add 2GB swap file
-sudo fallocate -l 2G /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
-# Make permanent
-echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-```
-
-For ARM systems (need more swap):
-
-```bash
-# Add 4GB swap file for ARM
+# Create 4GB swap file
 sudo fallocate -l 4G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
-# Make permanent
+
+# Add to fstab for persistence
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
+# Verify swap is enabled
+free -h
 ```
 
-### Node.js Memory Settings
+## 3. Environment Configuration
 
-For AMD64 systems:
+Create an environment file with proper settings:
+
 ```bash
-NODE_OPTIONS="--max-old-space-size=4096" node index.js
+# Navigate to your SuperChat directory
+cd /path/to/superchat
+
+# Create a new environment file
+cat > server/.env << 'EOL'
+# Server Configuration
+PORT=5050
+NODE_ENV=production
+LOG_LEVEL=INFO
+
+# Memory Management
+NODE_OPTIONS=--max-old-space-size=2048
+
+# Puppeteer Configuration
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
+CHROME_BIN=/usr/bin/google-chrome
+
+# For ARM64, use Chromium instead:
+# PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+# CHROME_BIN=/usr/bin/chromium-browser
+
+# PDF Service Configuration
+# Uncomment to delay PDF service initialization
+# DISABLE_PDF_SERVICE_ON_STARTUP=true
+
+# Add your API key here
+ANTHROPIC_API_KEY=your_api_key_here
+EOL
 ```
 
-For ARM systems (use lower value):
+## 4. Nginx Configuration
+
+To prevent 502 Bad Gateway errors, configure Nginx with proper timeouts:
+
 ```bash
-NODE_OPTIONS="--max-old-space-size=2048" node index.js
+# Create or edit your Nginx configuration
+sudo nano /etc/nginx/sites-available/superchat
+
+# Add the following configuration
+server {
+    listen 80;
+    server_name your-domain.com;  # Replace with your domain
+
+    # Set longer timeouts for PDF processing
+    proxy_connect_timeout 300s;
+    proxy_send_timeout 300s;
+    proxy_read_timeout 300s;
+    
+    # Increase buffer sizes
+    proxy_buffer_size 128k;
+    proxy_buffers 4 256k;
+    proxy_busy_buffers_size 256k;
+    
+    location / {
+        proxy_pass http://localhost:5050;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
 ```
 
-### ARM-specific Browser Flags
+Enable the site and restart Nginx:
 
-For best performance on ARM systems, add these flags when launching Puppeteer:
-
-```javascript
-const browser = await puppeteer.launch({
-  executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
-  args: [
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
-    '--disable-dev-shm-usage',
-    '--disable-gpu-sandbox',
-    '--use-gl=egl'  // Better for ARM GPUs
-  ]
-});
+```bash
+sudo ln -s /etc/nginx/sites-available/superchat /etc/nginx/sites-enabled/
+sudo nginx -t  # Test configuration
+sudo systemctl restart nginx
 ```
 
-## Troubleshooting
+## 5. Process Management with PM2
 
-### Common Issues and Solutions
+Install and configure PM2 for reliable process management:
 
-1. **Browser crashes with "killed" message**
-   - Increase available memory or add swap space
-   - Use `--disable-dev-shm-usage` flag (already added in our configuration)
+```bash
+# Install PM2 globally
+sudo npm install -g pm2
 
-2. **Missing shared libraries**
-   - For AMD64: Run `ldd $(which google-chrome)` to identify missing dependencies
-   - For ARM: Run `ldd $(which chromium-browser)` to identify missing dependencies
-   - Install the missing packages with `apt-get install`
+# Navigate to your SuperChat directory
+cd /path/to/superchat
 
-3. **Font rendering issues**
-   - Ensure Persian fonts are installed: `apt-get install fonts-farsiweb`
-   - Alternative: `apt-get install fonts-noto`
-   - Check font cache is updated: `fc-cache -fv`
+# Start with PM2
+pm2 start server/index.js --name superchat --max-memory-restart 2G
 
-4. **"No usable sandbox" error**
-   - We already use `--no-sandbox` flag in our configuration
-   - For production, consider configuring proper sandboxing
+# Save the process list
+pm2 save
 
-### ARM-Specific Troubleshooting
+# Configure PM2 to start on boot
+pm2 startup
+```
 
-If you encounter issues on ARM systems:
+## 6. Systemd Service (Alternative to PM2)
 
-1. **Chromium crashes**
-   - Increase swap space to at least 4GB
-   - Reduce the PDF size/complexity
-   - Try with `--disable-gpu-sandbox --use-gl=egl` flags
+As an alternative to PM2, you can use systemd:
 
-2. **Slow performance**
-   - ARM systems are typically slower for PDF generation
-   - Consider using simple table styles
-   - Limit concurrent PDF generations
+```bash
+# Create a systemd service file
+sudo nano /etc/systemd/system/superchat.service
+```
 
-3. **Missing browser binary**
-   - Ensure the PUPPETEER_EXECUTABLE_PATH is set correctly
-   - Try installing with: `sudo apt-get install chromium-browser`
-   - If that fails, try: `sudo apt-get install chromium`
+Add the following content:
 
-4. **Package installation errors with t64 suffix**
-   - Some newer Ubuntu ARM64 versions use the t64 suffix for packages
-   - Try installing without the suffix if you get errors
+```ini
+[Unit]
+Description=SuperChat Application
+After=network.target
 
-## Comparing Platforms
+[Service]
+WorkingDirectory=/path/to/superchat
+ExecStart=/usr/bin/node server/index.js
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=superchat
+User=your-user  # Replace with your user
+Environment=NODE_ENV=production
+Environment=PORT=5050
+Environment=NODE_OPTIONS=--max-old-space-size=2048
 
-- **Windows advantages**: Native Chrome integration, better font support out-of-the-box
-- **Ubuntu advantages**: Lower resource usage, better containerization support
+[Install]
+WantedBy=multi-user.target
+```
 
-Within Ubuntu systems:
-- **AMD64 advantages**: Better performance, full feature support
-- **ARM advantages**: Lower power consumption, potentially lower cost
+Enable and start the service:
 
-## Additional Resources
+```bash
+sudo systemctl enable superchat
+sudo systemctl start superchat
+```
 
-- [Puppeteer Troubleshooting Guide](https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md)
-- [Running Puppeteer in Docker](https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#running-puppeteer-in-docker)
-- [ARM-specific Chrome Issues](https://github.com/puppeteer/puppeteer/issues?q=is%3Aissue+arm)
+## 7. Logs and Monitoring
 
-## Conclusion
+### Checking Logs
 
-Our Puppeteer PDF service now provides cross-platform compatibility for both AMD64 and ARM architectures, ensuring that SuperChat can be deployed across a wide range of hardware configurations. The automated setup script handles the complexities of different Ubuntu versions and architectures, making deployment simple regardless of your environment.
+```bash
+# PM2 logs
+pm2 logs superchat
+
+# Or systemd logs
+sudo journalctl -u superchat -f
+
+# Nginx logs
+sudo tail -f /var/log/nginx/error.log
+```
+
+### Monitoring
+
+Run diagnostics to check system health:
+
+```bash
+# Navigate to your SuperChat directory
+cd /path/to/superchat
+
+# Run diagnostics
+node server/utils/server-diagnostics.js
+```
+
+## 8. Troubleshooting
+
+### Puppeteer Crashes / Segmentation Faults
+
+If you experience segmentation faults (SIGSEGV) or browser crashes:
+
+1. Verify Chrome is installed and can be run:
+   ```bash
+   google-chrome --version
+   # Or for ARM64:
+   chromium-browser --version
+   ```
+
+2. Test basic headless operation:
+   ```bash
+   google-chrome --headless --disable-gpu https://example.com
+   # Or for ARM64:
+   chromium-browser --headless --disable-gpu https://example.com
+   ```
+
+3. Try the test script:
+   ```bash
+   node server/utils/test-puppeteer-arm.js
+   ```
+
+### 502 Bad Gateway
+
+If you continue to see 502 Bad Gateway errors:
+
+1. Check if the application is running:
+   ```bash
+   pm2 status
+   # Or
+   sudo systemctl status superchat
+   ```
+
+2. Verify Nginx can connect to the app:
+   ```bash
+   sudo nginx -t
+   sudo netstat -tuln | grep 5050
+   ```
+
+3. Test the application directly without Nginx:
+   ```bash
+   curl http://localhost:5050/health
+   ```
+
+4. Increase log level for more information:
+   ```bash
+   # Edit .env file
+   nano server/.env
+   
+   # Change log level
+   LOG_LEVEL=DEBUG
+   
+   # Restart the application
+   pm2 restart superchat
+   ```
+
+## 9. Optimizations
+
+For production environments, consider these optimizations:
+
+1. Configure browser cache cleanup:
+   ```bash
+   # Add to your crontab
+   crontab -e
+   
+   # Add this line to run daily cleanup
+   0 3 * * * find /tmp -name 'puppeteer_*' -type d -mtime +1 -exec rm -rf {} \; 2>/dev/null || true
+   ```
+
+2. Set up application monitoring:
+   ```bash
+   # Install monitoring
+   pm2 install pm2-logrotate
+   pm2 set pm2-logrotate:max_size 10M
+   pm2 set pm2-logrotate:retain 7
+   ```
+
+3. Configure Chrome to use less memory:
+   ```bash
+   # Edit your .env file to add:
+   PUPPETEER_ARGS=--disable-dev-shm-usage,--disable-accelerated-2d-canvas,--no-first-run,--no-zygote,--single-process
+   ```
+
+## 10. Security Considerations
+
+1. Run the application as a non-root user
+2. Set up a firewall:
+   ```bash
+   sudo ufw allow 'Nginx Full'
+   sudo ufw enable
+   ```
+   
+3. Restrict permissions on environment files:
+   ```bash
+   chmod 600 server/.env
+   ```
+
+4. Use HTTPS with Let's Encrypt:
+   ```bash
+   sudo apt install certbot python3-certbot-nginx
+   sudo certbot --nginx -d your-domain.com
+   ```
+
+## Testing the Deployment
+
+After setting up, test the application:
+
+1. Check if the server is running:
+   ```bash
+   curl http://localhost:5050/health
+   ```
+
+2. Test PDF generation:
+   ```bash
+   curl http://localhost:5050/api/export/test -o test.pdf
+   ```
+
+3. Open the website in a browser and confirm everything works properly.

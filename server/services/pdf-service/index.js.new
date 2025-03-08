@@ -1,0 +1,186 @@
+/**
+ * PDF Service Factory
+ * Provides an abstraction layer for PDF generation with different backends
+ */
+
+const logger = require('../../utils/logger');
+const path = require('path');
+const fs = require('fs').promises;
+
+// Import service implementations
+const enhancedPdfService = require('./enhanced-pdf-service');
+const fontManager = require('./font-manager');
+const tableParser = require('./table-parser');
+
+// Lazy-loaded puppeteer service - only loaded when needed
+let puppeteerPdfService = null;
+
+/**
+ * Load the Puppeteer PDF service lazily to avoid startup issues
+ * @returns {Object} The puppeteer PDF service
+ */
+function loadPuppeteerService() {
+  if (!puppeteerPdfService) {
+    try {
+      puppeteerPdfService = require('./puppeteer-pdf-service');
+      logger.info('Puppeteer PDF service loaded successfully');
+    } catch (error) {
+      logger.error('Failed to load Puppeteer PDF service:', error.message);
+      logger.warn('Falling back to enhanced PDF service');
+      return null;
+    }
+  }
+  return puppeteerPdfService;
+}
+
+/**
+ * Create a PDF generator based on available services and environment
+ * @returns {Object} The best available PDF generator
+ */
+function createPdfGenerator() {
+  // Check for explicit service selection from environment
+  const forcedService = process.env.PDF_SERVICE;
+  if (forcedService) {
+    if (forcedService.toLowerCase() === 'puppeteer') {
+      const puppeteer = loadPuppeteerService();
+      if (puppeteer) {
+        logger.info('Using Puppeteer PDF service (forced by environment)');
+        return puppeteer;
+      }
+    } else if (forcedService.toLowerCase() === 'enhanced') {
+      logger.info('Using Enhanced PDF service (forced by environment)');
+      return enhancedPdfService;
+    }
+  }
+
+  // Try to use Puppeteer first (better RTL support)
+  try {
+    const puppeteer = loadPuppeteerService();
+    if (puppeteer) {
+      logger.info('Using Puppeteer PDF service for better RTL support');
+      return puppeteer;
+    }
+  } catch (error) {
+    logger.warn('Could not initialize Puppeteer PDF service:', error.message);
+  }
+
+  // Fall back to enhanced PDF service
+  logger.info('Using Enhanced PDF service as fallback');
+  return enhancedPdfService;
+}
+
+// Get the best PDF generator for the current environment
+const pdfGenerator = createPdfGenerator();
+
+/**
+ * Generate PDF with automatic service selection and error handling
+ * @param {string} tableHtml - HTML table content to convert
+ * @param {string} filename - Base filename for the generated PDF
+ * @param {Object} options - Additional options for PDF generation
+ * @returns {Promise<string>} - Path to the generated PDF file
+ */
+async function generatePDF(tableHtml, filename, options = {}) {
+  try {
+    // Try primary generator first
+    return await pdfGenerator.generatePDF(tableHtml, filename, options);
+  } catch (primaryError) {
+    logger.error('Primary PDF generation failed:', primaryError.message);
+    
+    // If primary generator fails, try fallback
+    if (pdfGenerator === puppeteerPdfService) {
+      logger.info('Attempting fallback to Enhanced PDF service');
+      try {
+        return await enhancedPdfService.generatePDF(tableHtml, filename, options);
+      } catch (fallbackError) {
+        logger.error('Fallback PDF generation also failed:', fallbackError.message);
+        throw new Error('All PDF generation methods failed');
+      }
+    } else {
+      // Try to load puppeteer if not already tried
+      try {
+        const puppeteer = loadPuppeteerService();
+        if (puppeteer) {
+          logger.info('Attempting fallback to Puppeteer PDF service');
+          return await puppeteer.generatePDF(tableHtml, filename, options);
+        }
+      } catch (puppeteerError) {
+        logger.error('Puppeteer fallback also failed:', puppeteerError.message);
+      }
+      
+      // If all fallbacks fail, rethrow the original error
+      throw primaryError;
+    }
+  }
+}
+
+/**
+ * Generate PDF with options, ensuring fallback mechanisms
+ * @param {string} tableHtml - HTML table content
+ * @param {string} filename - Output filename
+ * @param {Object} options - User-specified options
+ * @returns {Promise<string>} - Path to generated PDF
+ */
+async function generatePDFWithOptions(tableHtml, filename, options = {}) {
+  return generatePDF(tableHtml, filename, options);
+}
+
+/**
+ * Test PDF generation with a sample table
+ * @returns {Promise<string>} - Path to test PDF
+ */
+async function testPDF() {
+  // Create a test directory if it doesn't exist
+  const testDir = path.join(__dirname, '../../temp');
+  try {
+    await fs.mkdir(testDir, { recursive: true });
+  } catch (err) {
+    if (err.code !== 'EEXIST') {
+      logger.warn(`Could not create test directory: ${err.message}`);
+    }
+  }
+  
+  // Generate a test PDF
+  try {
+    return await generatePDF(`
+      <table>
+        <tr>
+          <th>Test Header 1</th>
+          <th>Test Header 2</th>
+        </tr>
+        <tr>
+          <td>Test Cell 1</td>
+          <td>Test Cell 2</td>
+        </tr>
+      </table>
+    `, 'pdf-service-test');
+  } catch (error) {
+    logger.error('PDF service test failed:', error.message);
+    throw new Error(`PDF service test failed: ${error.message}`);
+  }
+}
+
+// Export the PDF services with high-level interface and implementation details
+module.exports = {
+  // Main PDF generation functions
+  generatePDF,
+  generatePDFWithOptions,
+  testPDF,
+  
+  // Service implementations for direct access if needed
+  enhancedPdfService,
+  getPuppeteerService: loadPuppeteerService,
+  
+  // Font management functions
+  registerPDFKitFonts: fontManager.registerPDFKitFonts,
+  generateFontCSS: fontManager.generateFontCSS,
+  verifyFonts: fontManager.verifyFonts,
+  
+  // Table parsing functions
+  parseHtmlTable: tableParser.parseHtmlTable,
+  processTableData: tableParser.processTableData,
+  processTableDataWithRTL: tableParser.processTableDataWithRTL,
+  extractTableStyles: tableParser.extractTableStyles,
+  
+  // Utility method to check which generator is active
+  getCurrentGenerator: () => pdfGenerator === puppeteerPdfService ? 'puppeteer' : 'enhanced'
+};
