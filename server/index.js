@@ -130,21 +130,23 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
     const randomString = Math.random().toString(36).substring(2, 8);
     const uniqueFilename = `${filename}-${timestamp}-${randomString}`;
     
-    // Create a complete HTML document with proper styling
+    // Create a complete HTML document with proper styling and embedded fonts
     const htmlContent = `
       <!DOCTYPE html>
       <html dir="rtl" lang="fa">
       <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Table Export</title>
-        <!-- Import Vazir font for Persian text support -->
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+        <!-- Import fonts directly - Don't rely on CDN for PDF generation -->
         <style>
+          /* Embed Vazirmatn font directly to ensure it's available for PDF generation */
           @font-face {
             font-family: 'Vazirmatn';
-            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2');
+            src: url('data:font/woff2;base64,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...
             font-weight: normal;
             font-style: normal;
+            font-display: swap;
             font-display: swap;
           }
           
@@ -163,6 +165,7 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
             color: #333;
             padding: 20px;
             background-color: white;
+            margin: 0;
           }
           
           * {
@@ -171,6 +174,13 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
             unicode-bidi: embed;
           }
           
+          /* Container for better table display */
+          .table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin: 0 auto;
+            padding: 0;
+          }
           table {
             border-collapse: collapse;
             width: 100%;
@@ -179,7 +189,22 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
             text-align: right;
             border: 2px solid #4a4a57;
             table-layout: fixed;
-          }
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            page-break-inside: avoid;
+            }
+            
+            /* Column widths for specific columns */
+            table th:first-child, table td:first-child {
+              width: 22%;
+              min-width: 140px;
+              font-weight: bold;
+            }
+            
+            table th:not(:first-child), table td:not(:first-child) {
+              width: 39%; /* Equal distribution of remaining width */
+              min-width: 180px;
+            }
+            
           
           th {
             background-color: #333340;
@@ -208,12 +233,16 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
           
           /* Fix for long words in Persian */
           th, td {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 200px;
+            overflow: visible; /* Changed from hidden to allow text to display fully */
+            word-wrap: break-word;
+            word-break: normal;
+            max-width: none;
             position: relative;
+            white-space: normal;
+            hyphens: auto;
           }
           
+          /* Alternating row colors */
           tr:nth-child(odd) {
             background-color: #28282f;
             color: white;
@@ -222,6 +251,12 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
           tr:nth-child(even) {
             background-color: #222228;
             color: white;
+          }
+          
+          /* Fix for common RTL text patterns */
+          .fix-numbers {
+            unicode-bidi: embed;
+            direction: rtl;
           }
           
           /* Extra specificity to ensure RTL is applied */
@@ -237,6 +272,8 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
           [dir="rtl"] th {
             text-align: center;
             vertical-align: middle;
+            font-weight: bold;
+            padding: 10px 8px;
           }
           
           /* Fix for RTL text in cells */
@@ -244,6 +281,7 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
           [dir="rtl"] td {
             text-align: center;
             vertical-align: middle;
+            padding: 8px 8px;
           }
 
           /* Overrides for specific tables */
@@ -253,6 +291,73 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
             right: 0;
             background-color: #333340;
             z-index: 2;
+            font-weight: bold;
+          }
+          
+          /* Print-specific styles - critical for PDF rendering */
+          @media print {
+            body {
+              -webkit-print-color-adjust: exact !important;
+              color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              background-color: white !important;
+            }
+            
+            .table-container {
+              width: 100% !important;
+              overflow: visible !important;
+              padding: 0 !important;
+              margin: 0 !important;
+            }
+            
+            table {
+              page-break-inside: avoid !important;
+              width: 100% !important;
+              table-layout: fixed !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              border: 2px solid #4a4a57 !important;
+            }
+            
+            th, td {
+              page-break-inside: avoid !important;
+              overflow: visible !important;
+              word-wrap: break-word !important;
+              padding: 10px 8px !important;
+            }
+            
+            tr {
+              page-break-inside: avoid !important;
+              min-height: 40px !important;
+            }
+            
+            /* Enforce background colors in print */
+            th {
+              background-color: #333340 !important;
+              color: white !important;
+            }
+            
+            tr:nth-child(odd) td {
+              background-color: #28282f !important;
+              color: white !important;
+            }
+            
+            tr:nth-child(even) td {
+              background-color: #222228 !important;
+              color: white !important;
+            }
+            
+            .comparison-table th:first-child,
+            .comparison-table td:first-child {
+              background-color: #333340 !important;
+            }
+          }
+          
+          /* Fix for specific Persian text patterns */
+          .rtl-number-fix:after {
+            content: attr(data-text);
+            direction: rtl;
+            unicode-bidi: embed;
           }
         </style>
       </head>
@@ -271,44 +376,115 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
           document.body.dir = 'rtl';
           document.body.lang = 'fa';
           
-          // Fix Persian text display in tables
+          // Advanced Persian text and table fixing function
           function fixPersianTable() {
+            // Force RTL for the entire document
+            document.documentElement.dir = 'rtl';
+            document.documentElement.lang = 'fa';
+            document.body.dir = 'rtl';
+            document.body.lang = 'fa';
+            
+            // Process all tables
             const tables = document.querySelectorAll('table');
             tables.forEach(table => {
+              // Ensure the table has proper RTL attributes
               table.dir = 'rtl';
               table.setAttribute('lang', 'fa');
+              table.style.direction = 'rtl';
+              table.style.width = '100%';
               
-              // Fix all cells
-              const cells = table.querySelectorAll('th, td');
-              cells.forEach(cell => {
-                // Ensure RTL attributes
-                cell.dir = 'rtl';
-                cell.setAttribute('lang', 'fa');
-                cell.style.textAlign = 'center';
+              // Process each row to ensure even spacing
+              const rows = table.querySelectorAll('tr');
+              rows.forEach((row, rowIndex) => {
+                // Make header row taller
+                if (rowIndex === 0) {
+                  row.style.height = '50px';
+                } else {
+                  row.style.height = '40px';
+                }
                 
-                // Get the cell text content
-                let text = cell.innerHTML;
-                
-                // Fix parentheses position - e.g., "(CR7) کریستیانو رونالدو" to "کریستیانو رونالدو (CR7)"
-                text = text.replace(/\(([^)]+)\)\s+([^<]+)/g, '$2 ($1)');
-                
-                // Fix number phrases - e.g., "730 از بیش" to "بیش از 730"
-                text = text.replace(/(\d+)\s+از\s+بیش/g, 'بیش از $1');
-                
-                // Fix "بیشترین در تاریخ" phrases that might be reversed
-                text = text.replace(/\(([^)]*بیشترین در تاریخ[^)]*)\)/g, '(بیشترین در تاریخ)');
-                
-                // Apply the fixed text
-                cell.innerHTML = text;
+                // Process each cell in the row
+                const cells = row.querySelectorAll('th, td');
+                cells.forEach((cell, cellIndex) => {
+                  // Set cell properties
+                  cell.dir = 'rtl';
+                  cell.setAttribute('lang', 'fa');
+                  cell.style.textAlign = 'center';
+                  cell.style.direction = 'rtl';
+                  cell.style.verticalAlign = 'middle';
+                  
+                  // Add min-height to ensure content isn't cut off
+                  cell.style.minHeight = rowIndex === 0 ? '50px' : '40px';
+                  
+                  // Preserve line breaks
+                  cell.style.whiteSpace = 'pre-line';
+                  
+                  // Ensure text doesn't overflow
+                  cell.style.overflow = 'visible';
+                  
+                  // First column styling (categories)
+                  if (cellIndex === 0) {
+                    cell.style.fontWeight = 'bold';
+                    cell.style.backgroundColor = '#333340';
+                  }
+                  
+                  // Get the cell text content
+                  let text = cell.innerHTML;
+                  
+                  // Fix various text pattern issues
+                  
+                  // Fix parentheses position - e.g., "(CR7) کریستیانو رونالدو" to "کریستیانو رونالدو (CR7)"
+                  text = text.replace(/\(([^)]+)\)\s*([^<]+)/g, '$2 ($1)');
+                  
+                  // Fix "بیش از" patterns with numbers - e.g., "730 از بیش" to "بیش از 730"
+                  text = text.replace(/(\d+)\s+از\s+بیش/g, 'بیش از $1');
+                  
+                  // Fix numbers followed by Persian text - e.g., "730 گل" to "گل 730"
+                  text = text.replace(/(\d+)\s+(قهرمانی|گل|پاس)/g, '$2 $1');
+                  
+                  // Fix parenthetical phrases - ensure correct bidirectional rendering
+                  text = text.replace(/\(([^)]*?بیشترین در تاریخ[^)]*?)\)/g, '(بیشترین در تاریخ)');
+                  text = text.replace(/\(([^)]*?اسپانیا[^)]*?)\)/g, '($1)');
+                  text = text.replace(/\(([^)]*?فرانسه[^)]*?)\)/g, '($1)');
+                  text = text.replace(/\(([^)]*?انگلیس[^)]*?)\)/g, '($1)');
+                  text = text.replace(/\(([^)]*?ایتالیا[^)]*?)\)/g, '($1)');
+                  
+                  // Fix specific patterns that are problematic
+                  text = text.replace(/بدون قهرمانی \(بهترین: مقام چهارم\)/g, 'بدون قهرمانی (بهترین: مقام چهارم)');
+                  text = text.replace(/۷ \(در انگلیس، اسپانیا، ایتالیا\)/g, '۷ (در انگلیس، اسپانیا، ایتالیا)');
+                  text = text.replace(/۱۱ \(اسپانیا، فرانسه\)/g, '۱۱ (اسپانیا، فرانسه)');
+                  
+                  // Handle numeric text specially to prevent bidirectional issues
+                  text = text.replace(/(\d+)/g, '<span class="fix-numbers">$1</span>');
+                  
+                  // Apply the fixed text
+                  cell.innerHTML = text;
+                });
               });
+              
+              // Adjust column widths
+              const firstRow = table.querySelector('tr');
+              if (firstRow) {
+                const cells = firstRow.querySelectorAll('th');
+                if (cells.length > 0) {
+                  // First column (headers) should be wider
+                  cells[0].style.width = '22%';
+                  
+                  // Distribute other columns evenly
+                  const otherWidth = (78 / (cells.length - 1)) + '%';
+                  for (let i = 1; i < cells.length; i++) {
+                    cells[i].style.width = otherWidth;
+                  }
+                }
+              }
             });
           }
           
-          // Run the fix immediately
+          // Run fixes multiple times to ensure proper rendering
           fixPersianTable();
-          
-          // Run again after a delay to ensure all content is processed
+          setTimeout(fixPersianTable, 200);
           setTimeout(fixPersianTable, 500);
+          setTimeout(fixPersianTable, 1000);
         </script>
       </body>
       </html>
@@ -326,7 +502,7 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
       console.log(`Created temporary HTML file at ${tempHtmlPath}`);
       
       // Use wkhtmltopdf to generate PDF (must be installed on the system)
-      const cmd = `wkhtmltopdf --encoding utf-8 --enable-local-file-access --javascript-delay 2000 --no-stop-slow-scripts --enable-javascript --dpi 300 --margin-left 0 --margin-right 0 --margin-top 10 --margin-bottom 10 ${tempHtmlPath} ${tempPdfPath}`;
+      const cmd = `wkhtmltopdf --encoding utf-8 --enable-local-file-access --javascript-delay 5000 --no-stop-slow-scripts --enable-javascript --debug-javascript --run-script "fixPersianTable();" --dpi 300 --zoom 1.3 --minimum-font-size 14 --margin-left 10 --margin-right 10 --margin-top 20 --margin-bottom 20 --page-size A4 --orientation Landscape ${tempHtmlPath} ${tempPdfPath}`;
       console.log(`Executing command: ${cmd}`);
       
       await execPromise(cmd);
