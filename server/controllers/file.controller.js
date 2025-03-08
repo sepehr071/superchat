@@ -65,7 +65,8 @@ exports.uploadFiles = (req, res) => {
       
       res.status(200).json({
         message: 'Files uploaded successfully',
-        files: fileRecords,
+        fileIds: fileRecords.map(file => file.id),
+        files: fileRecords, // Keep this for backward compatibility
         conversationId: conversationId
       });
     } catch (error) {
@@ -147,7 +148,8 @@ exports.addFilesToConversation = (req, res) => {
       
       res.status(200).json({
         message: 'Files uploaded successfully',
-        files: fileRecords,
+        fileIds: fileRecords.map(file => file.id),
+        files: fileRecords, // Keep this for backward compatibility
         conversationId: conversationId
       });
     } catch (error) {

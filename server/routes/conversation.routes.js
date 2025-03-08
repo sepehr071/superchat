@@ -11,6 +11,13 @@ const router = express.Router();
 router.post('/create-empty', conversationController.createEmpty);
 
 /**
+ * @route   POST /api/conversations
+ * @desc    Create a new conversation with uploaded files
+ * @access  Private
+ */
+router.post('/', conversationController.createWithFiles);
+
+/**
  * @route   GET /api/conversations
  * @desc    Get all conversations for the current user
  * @access  Private

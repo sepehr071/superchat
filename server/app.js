@@ -134,6 +134,7 @@ app.post('/api/upload', authenticateUser, upload.array('files', 10), (req, res) 
       
       res.status(200).json({
         message: 'Files uploaded successfully',
+        fileIds: fileRecords.map(file => file.id),
         files: fileRecords,
         conversationId: conversationId
       });
@@ -214,6 +215,7 @@ app.post('/api/conversation/:id/upload', authenticateUser, upload.array('files',
       
       res.status(200).json({
         message: 'Files uploaded successfully',
+        fileIds: fileRecords.map(file => file.id),
         files: fileRecords,
         conversationId: conversationId
       });

@@ -32,6 +32,64 @@ exports.createEmpty = (req, res) => {
 };
 
 /**
+ * Create a new conversation with uploaded files
+ */
+exports.createWithFiles = (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { fileIds, type } = req.body;
+    
+    if (!fileIds || !Array.isArray(fileIds) || fileIds.length === 0) {
+      return res.status(400).json({ error: 'File IDs are required' });
+    }
+    
+    // Generate title from the first file name
+    const fileInfo = db.prepare(`
+      SELECT file_name FROM pdf_files WHERE id = ?
+    `).get(fileIds[0]);
+    
+    let title = "PDF Chat";
+    if (fileInfo && fileInfo.file_name) {
+      const extension = path.extname(fileInfo.file_name);
+      title = fileInfo.file_name.replace(extension, '');
+    }
+    
+    // Insert conversation
+    const insertConversation = db.prepare(`
+      INSERT INTO conversations (user_id, title, type)
+      VALUES (?, ?, ?)
+    `);
+    
+    const result = insertConversation.run(userId, title, type || 'pdf');
+    const conversationId = result.lastInsertRowid;
+    
+    // Update file records to associate them with this conversation
+    const updateFileConversation = db.prepare(`
+      UPDATE pdf_files 
+      SET conversation_id = ? 
+      WHERE id = ?
+    `);
+    
+    // Process each file ID
+    fileIds.forEach(fileId => {
+      try {
+        updateFileConversation.run(conversationId, fileId);
+      } catch (err) {
+        console.error(`Error updating file ${fileId} association:`, err);
+      }
+    });
+    
+    res.status(201).json({
+      message: 'Conversation created successfully',
+      conversation: { id: conversationId, title, type: type || 'pdf' }
+    });
+  } catch (error) {
+    console.error('Error creating conversation with files:', error);
+    res.status(500).json({ error: 'Failed to create conversation' });
+  }
+};
+
+/**
  * Get all conversations for the current user
  */
 exports.getAllConversations = (req, res) => {

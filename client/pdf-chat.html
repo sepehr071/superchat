@@ -714,7 +714,7 @@
         uploadButton.textContent = 'Uploading...';
         
         // Upload files
-        fetch('/api/files/upload', {
+        fetch('/api/upload', {
           method: 'POST',
           body: formData,
           credentials: 'include'
@@ -728,30 +728,25 @@
         .then(data => {
           console.log('Files uploaded:', data);
           
-          // Create a new conversation with the uploaded files
-          return fetch('/api/conversations', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              fileIds: data.fileIds,
-              type: 'pdf'
-            }),
-            credentials: 'include'
-          });
-        })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('Failed to create conversation');
-          }
-          return response.json();
-        })
-        .then(data => {
-          console.log('Conversation created:', data);
+// Store conversation ID and files
+          window.currentConversationId = data.conversationId;
+          window.uploadedFiles = data.files || [];
           
-          // Redirect to the same page with the conversation ID
-          window.location.href = `pdf-chat.html?conversation=${data.conversation.id}`;
+          // Show chat interface
+          document.getElementById('upload-container').classList.add('hidden');
+          document.getElementById('content-container').classList.remove('hidden');
+           
+          // Update conversation title
+          document.getElementById('conversation-title').textContent = "PDF Chat";
+           
+          // Populate files panel with uploaded files
+          if (typeof window.updateFilesPanel === 'function') {
+            window.updateFilesPanel(data.files);
+          
+}
+          // Initialize chat
+          window.conversationHistory = [];
+          initializeChat();
         })
         .catch(error => {
           console.error('Error uploading files:', error);
