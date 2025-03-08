@@ -7,6 +7,7 @@ const puppeteer = require('puppeteer');
 const fs = require('fs-extra');
 const path = require('path');
 const crypto = require('crypto');
+const puppeteerConfig = require('../../config/puppeteer-config');
 
 // Singleton browser instance for reuse
 let browserInstance = null;
@@ -27,16 +28,8 @@ async function getBrowser() {
     console.log('Launching new Puppeteer browser instance...');
 
     // Platform-specific options for different architectures and operating systems
-    const options = {
-      headless: 'new',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage', // Linux specific: prevents OOM in Docker
-        '--disable-gpu',
-        '--font-render-hinting=none'
-      ]
-    };
+    // Use our centralized config with architecture-specific settings
+    const options = { ...puppeteerConfig };
     
     // Use environment-provided executable path if available (important for ARM/Linux)
     if (process.env.PUPPETEER_EXECUTABLE_PATH) {
@@ -47,24 +40,10 @@ async function getBrowser() {
       options.executablePath = process.env.CHROME_BIN;
     }
     
-    // Add Linux-specific options for better compatibility
-    if (process.platform === 'linux') {
-      options.executablePath = process.env.CHROME_BIN || null;
-      options.args.push(
-        '--single-process', // Helps on some Linux configurations
-        '--disable-features=site-per-process', // Helps with memory issues
-        '--disable-software-rasterizer'
-      );
-      
-      // Additional ARM-specific settings
-      if (process.arch === 'arm' || process.arch === 'arm64') {
-        console.log('ARM architecture detected, using optimized settings');
-        options.args.push(
-          '--use-gl=egl', // Better for ARM GPUs
-          '--disable-gpu-sandbox'
-        );
-      }
-    }
+    // Log detailed system information for debugging
+    console.log('System information:');
+    console.log(` - Platform: ${process.platform}`);
+    console.log(` - Architecture: ${process.arch}`);
     
     browserInstance = await puppeteer.launch(options);
     
@@ -218,8 +197,9 @@ async function generatePDF(tableHtml, filename = DEFAULT_FILENAME, options = {})
     const pdfBuffer = await fs.readFile(outputPath);
     pdfBufferCache.set(cacheKey, pdfBuffer);
     
-    // Limit buffer cache size to avoid memory issues
-    if (pdfBufferCache.size > 20) {
+    // Limit buffer cache size to avoid memory issues (lower for ARM)
+    const maxCacheSize = process.arch === 'arm64' ? 10 : 20;
+    if (pdfBufferCache.size > maxCacheSize) {
       // Remove oldest entry (first key added)
       const oldestKey = pdfBufferCache.keys().next().value;
       pdfBufferCache.delete(oldestKey);
@@ -231,17 +211,61 @@ async function generatePDF(tableHtml, filename = DEFAULT_FILENAME, options = {})
     return outputPath;
   } catch (error) {
     console.error('Error generating PDF with Puppeteer:', error);
+    
+    // Try to diagnose the issue
+    try {
+      // Create a safer version of options for a retry
+      const fallbackOptions = {
+        headless: 'new',
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--single-process'
+        ],
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN
+      };
+      
+      console.error('Trying fallback puppeteer options...');
+      const fallbackBrowser = await puppeteer.launch(fallbackOptions);
+      await fallbackBrowser.close();
+      console.error('Fallback browser launched successfully - issue may be with page creation or rendering');
+    } catch (fallbackError) {
+      console.error('Fallback browser also failed:', fallbackError);
+    }
+    
     // Provide detailed error for Linux debugging
     if (process.platform === 'linux') {
       console.error('Linux-specific debugging info:');
-      console.error('- Check Chrome dependencies with: ldd $(which google-chrome)');
+      console.error('- Check Chrome dependencies');
+      
+      if (process.arch === 'arm64') {
+        console.error('- ARM64 architecture detected, may need ARM-specific packages');
+        console.error('- Make sure chromium-browser is installed');
+      } else {
+        console.error('- Check Chrome dependencies with: ldd $(which google-chrome)');
+      }
+      
       console.error('- Ensure fonts-liberation package is installed');
     }
+    
     throw new Error(`Failed to generate PDF: ${error.message}`);
   } finally {
     // Clean up page but keep browser for reuse
     if (page) {
       await page.close().catch(e => console.error('Error closing page:', e));
+    }
+  
+    // If we keep having issues, release the browser instance for a fresh start next time
+    if (browserInstance && Math.random() < 0.05) { // 5% chance of browser reset
+      try {
+        await browserInstance.close();
+      } catch (e) {
+        console.error('Error closing browser during periodic cleanup:', e);
+      }
+      browserInstance = null;
+      console.log('Browser instance released for periodic refresh');
     }
   }
 }
