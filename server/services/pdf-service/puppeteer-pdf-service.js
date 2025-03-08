@@ -10,8 +10,8 @@ const crypto = require('crypto');
 
 // Singleton browser instance for reuse
 let browserInstance = null;
-// PDF cache to avoid regenerating identical tables
-const pdfCache = new Map();
+// PDF buffer cache to avoid regenerating identical tables
+const pdfBufferCache = new Map();
 
 // Constants for PDF generation
 const PDF_TEMP_DIR = path.join(__dirname, '../../temp');
@@ -25,8 +25,8 @@ const DEFAULT_FILENAME = 'table-export';
 async function getBrowser() {
   if (!browserInstance) {
     console.log('Launching new Puppeteer browser instance...');
-    
-    // Different launch options for Windows vs Linux
+
+    // Platform-specific options for different architectures and operating systems
     const options = {
       headless: 'new',
       args: [
@@ -38,6 +38,15 @@ async function getBrowser() {
       ]
     };
     
+    // Use environment-provided executable path if available (important for ARM/Linux)
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+      console.log(`Using browser from PUPPETEER_EXECUTABLE_PATH: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
+      options.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    } else if (process.env.CHROME_BIN) {
+      console.log(`Using browser from CHROME_BIN: ${process.env.CHROME_BIN}`);
+      options.executablePath = process.env.CHROME_BIN;
+    }
+    
     // Add Linux-specific options for better compatibility
     if (process.platform === 'linux') {
       options.executablePath = process.env.CHROME_BIN || null;
@@ -46,6 +55,15 @@ async function getBrowser() {
         '--disable-features=site-per-process', // Helps with memory issues
         '--disable-software-rasterizer'
       );
+      
+      // Additional ARM-specific settings
+      if (process.arch === 'arm' || process.arch === 'arm64') {
+        console.log('ARM architecture detected, using optimized settings');
+        options.args.push(
+          '--use-gl=egl', // Better for ARM GPUs
+          '--disable-gpu-sandbox'
+        );
+      }
     }
     
     browserInstance = await puppeteer.launch(options);
@@ -97,10 +115,20 @@ async function generatePDF(tableHtml, filename = DEFAULT_FILENAME, options = {})
   // Generate cache key
   const cacheKey = calculateCacheKey(tableHtml, options);
   
-  // Check if we have a cached version
-  if (pdfCache.has(cacheKey)) {
-    console.log('Using cached PDF version');
-    return pdfCache.get(cacheKey);
+  // Create unique filename based on time and random ID
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const randomId = crypto.randomBytes(4).toString('hex');
+  const uniqueFilename = `${filename}-${timestamp}-${randomId}.pdf`;
+  const outputPath = path.join(PDF_TEMP_DIR, uniqueFilename);
+  
+  // Check if we have a cached buffer version
+  if (pdfBufferCache.has(cacheKey)) {
+    console.log('Using cached PDF buffer');
+    
+    // Write the cached buffer to a new file
+    await fs.writeFile(outputPath, pdfBufferCache.get(cacheKey));
+    console.log(`Cached PDF buffer written to: ${outputPath}`);
+    return outputPath;
   }
   
   const defaultOptions = {
@@ -119,20 +147,14 @@ async function generatePDF(tableHtml, filename = DEFAULT_FILENAME, options = {})
     headerTextColor: 'white'
   };
 
-  // Merge with custom options
+  // Merge default options with custom options
   const opts = { ...defaultOptions, ...options };
 
   // Ensure temp directory exists
   if (!fs.existsSync(PDF_TEMP_DIR)) {
     fs.mkdirSync(PDF_TEMP_DIR, { recursive: true });
   }
-
-  // Create unique filename
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const randomId = crypto.randomBytes(4).toString('hex');
-  const uniqueFilename = `${filename}-${timestamp}-${randomId}.pdf`;
-  const outputPath = path.join(PDF_TEMP_DIR, uniqueFilename);
-
+  
   console.log(`Starting Puppeteer PDF generation for ${filename}...`);
 
   // Create a complete HTML document with proper RTL styling
@@ -192,14 +214,15 @@ async function generatePDF(tableHtml, filename = DEFAULT_FILENAME, options = {})
       omitBackground: false // Ensure background colors are included
     });
 
-    // Store in cache
-    pdfCache.set(cacheKey, outputPath);
+    // Read the file into a buffer and cache it
+    const pdfBuffer = await fs.readFile(outputPath);
+    pdfBufferCache.set(cacheKey, pdfBuffer);
     
-    // Limit cache size to avoid memory issues
-    if (pdfCache.size > 20) {
+    // Limit buffer cache size to avoid memory issues
+    if (pdfBufferCache.size > 20) {
       // Remove oldest entry (first key added)
-      const oldestKey = pdfCache.keys().next().value;
-      pdfCache.delete(oldestKey);
+      const oldestKey = pdfBufferCache.keys().next().value;
+      pdfBufferCache.delete(oldestKey);
     }
     
     const endTime = Date.now();
@@ -429,5 +452,7 @@ module.exports = {
   generatePDF,
   generatePDFWithOptions,
   testPDF,
-  cleanupBrowser
+  cleanupBrowser,
+  // For testing purposes only
+  _clearCache: () => pdfBufferCache.clear()
 };
