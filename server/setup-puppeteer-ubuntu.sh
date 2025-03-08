@@ -2,7 +2,7 @@
 #
 # SuperChat Puppeteer Setup Script for Ubuntu
 # This script sets up all required dependencies for running the Puppeteer PDF service on Ubuntu
-# Compatible with Ubuntu 22.04+ and older versions
+# Compatible with Ubuntu on both AMD64 and ARM64 architectures
 #
 
 # Text formatting
@@ -36,6 +36,20 @@ function show_progress() {
   echo -e "${BLUE}==>${RESET} ${BOLD}$1${RESET}"
 }
 
+# Function to detect system architecture
+function detect_architecture() {
+  ARCH=$(dpkg --print-architecture)
+  echo -e "${BLUE}Detected system architecture: $ARCH${RESET}"
+  
+  # Check if ARM or AMD64
+  if [[ "$ARCH" == "arm64" || "$ARCH" == "armhf" ]]; then
+    IS_ARM=true
+    echo -e "${YELLOW}ARM architecture detected. Will use Chromium instead of Chrome.${RESET}"
+  else
+    IS_ARM=false
+  fi
+}
+
 # Function to detect Ubuntu version
 function detect_ubuntu_version() {
   if [ -f /etc/os-release ]; then
@@ -57,6 +71,9 @@ function handle_error() {
   exit 1
 }
 
+# Detect architecture
+detect_architecture
+
 # Update package list
 show_progress "Updating package list..."
 apt-get update || handle_error "Failed to update package list"
@@ -64,44 +81,37 @@ apt-get update || handle_error "Failed to update package list"
 # Detect Ubuntu version to handle package differences
 detect_ubuntu_version
 
-# Install Chrome dependencies
-show_progress "Installing Chrome dependencies for Ubuntu $UBUNTU_VERSION..."
+# Install browser dependencies
+show_progress "Installing browser dependencies for Ubuntu $UBUNTU_VERSION on $ARCH architecture..."
 
 # Common packages for all Ubuntu versions
 COMMON_PACKAGES="ca-certificates fonts-liberation libdbus-1-3 libexpat1 libfontconfig1 libgbm1 libnspr4 libnss3 libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 lsb-release wget xdg-utils"
 
-# For Ubuntu 22.04+ with t64 suffix
+# Install common packages first
+apt-get install -y $COMMON_PACKAGES || echo -e "${YELLOW}Warning: Some common packages could not be installed${RESET}"
+
+# For Ubuntu 22.04+ 
 if [[ "$UBUNTU_VERSION" == "22.04" || "$UBUNTU_VERSION" == "23.04" || "$UBUNTU_VERSION" == "23.10" || "$UBUNTU_VERSION" == "24.04" || "$UBUNTU_VERSION" == "latest" ]]; then
-  show_progress "Using package names for Ubuntu 22.04+ (with t64 suffix)..."
+  show_progress "Using package names for Ubuntu 22.04+..."
   
-  # Try installing common packages first
-  apt-get install -y $COMMON_PACKAGES || echo -e "${YELLOW}Warning: Some common packages could not be installed${RESET}"
-  
-  # Try to install libasound2 with proper suffix
-  apt-get install -y libasound2t64 || {
-    echo -e "${YELLOW}Warning: Could not install libasound2t64, trying alternative...${RESET}"
-    apt-get install -y liboss4-salsa-asound2 || {
-      echo -e "${YELLOW}Warning: Could not install audio libraries, continuing anyway...${RESET}"
-    }
-  }
-  
-  # Install t64 packages individually to continue on errors
-  apt-get install -y libatk-bridge2.0-0t64 || echo -e "${YELLOW}Warning: Could not install libatk-bridge2.0-0t64${RESET}"
-  apt-get install -y libatk1.0-0t64 || echo -e "${YELLOW}Warning: Could not install libatk1.0-0t64${RESET}"
+  # Install architecture-specific packages individually to continue on errors
   apt-get install -y libc6 || echo -e "${YELLOW}Warning: Could not install libc6${RESET}"
   apt-get install -y libcairo2 || echo -e "${YELLOW}Warning: Could not install libcairo2${RESET}"
-  apt-get install -y libcups2t64 || echo -e "${YELLOW}Warning: Could not install libcups2t64${RESET}"
   apt-get install -y libgcc-s1 || echo -e "${YELLOW}Warning: Could not install libgcc-s1${RESET}"
-  apt-get install -y libglib2.0-0t64 || echo -e "${YELLOW}Warning: Could not install libglib2.0-0t64${RESET}"
-  apt-get install -y libgtk-3-0t64 || echo -e "${YELLOW}Warning: Could not install libgtk-3-0t64${RESET}"
+  
+  # Try both with and without t64 suffix
+  apt-get install -y libasound2 libasound2t64 liboss4-salsa-asound2 2>/dev/null || echo -e "${YELLOW}Warning: Could not install audio libraries${RESET}"
+  apt-get install -y libatk-bridge2.0-0 libatk-bridge2.0-0t64 2>/dev/null || echo -e "${YELLOW}Warning: Could not install libatk-bridge2.0-0${RESET}"
+  apt-get install -y libatk1.0-0 libatk1.0-0t64 2>/dev/null || echo -e "${YELLOW}Warning: Could not install libatk1.0-0${RESET}"
+  apt-get install -y libcups2 libcups2t64 2>/dev/null || echo -e "${YELLOW}Warning: Could not install libcups2${RESET}"
+  apt-get install -y libglib2.0-0 libglib2.0-0t64 2>/dev/null || echo -e "${YELLOW}Warning: Could not install libglib2.0-0${RESET}"
+  apt-get install -y libgtk-3-0 libgtk-3-0t64 2>/dev/null || echo -e "${YELLOW}Warning: Could not install libgtk-3-0${RESET}"
   
 else
   # For older Ubuntu versions (pre-22.04)
   show_progress "Using package names for older Ubuntu versions..."
   
   # Install packages for older Ubuntu
-  apt-get install -y $COMMON_PACKAGES || echo -e "${YELLOW}Warning: Some common packages could not be installed${RESET}"
-  
   apt-get install -y libappindicator3-1 || echo -e "${YELLOW}Warning: Could not install libappindicator3-1${RESET}"
   apt-get install -y libasound2 || echo -e "${YELLOW}Warning: Could not install libasound2${RESET}"
   apt-get install -y libatk-bridge2.0-0 || echo -e "${YELLOW}Warning: Could not install libatk-bridge2.0-0${RESET}"
@@ -114,20 +124,57 @@ else
   apt-get install -y libgtk-3-0 || echo -e "${YELLOW}Warning: Could not install libgtk-3-0${RESET}"
 fi
 
-echo -e "${GREEN}Chrome dependencies installation completed.${RESET}"
-echo -e "${YELLOW}Note: Some packages may not have installed correctly depending on your Ubuntu version,${RESET}"
-echo -e "${YELLOW}but we'll continue with the setup process.${RESET}"
+echo -e "${GREEN}Browser dependencies installation completed.${RESET}"
 
-# Install Chrome browser if not already installed
-if ! which google-chrome &>/dev/null; then
-  show_progress "Installing Google Chrome..."
-  wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - || handle_error "Failed to add Google signing key"
-  echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list || handle_error "Failed to add Google repository"
-  apt-get update || handle_error "Failed to update package list after adding Google repository"
-  apt-get install -y google-chrome-stable || handle_error "Failed to install Google Chrome"
-  echo -e "${GREEN}Successfully installed Google Chrome.${RESET}"
+# Install Chromium for ARM or Google Chrome for AMD64
+if [ "$IS_ARM" = true ]; then
+  show_progress "Installing Chromium Browser for ARM architecture..."
+  apt-get install -y chromium-browser || handle_error "Failed to install Chromium"
+  
+  # Set environment variable for Chromium
+  CHROME_BIN=$(which chromium-browser)
+  if [ -z "$CHROME_BIN" ]; then
+    # Try alternative binary name
+    CHROME_BIN=$(which chromium)
+    if [ -z "$CHROME_BIN" ]; then
+      handle_error "Could not find Chromium binary"
+    fi
+  fi
+  
+  echo -e "${GREEN}Successfully installed Chromium Browser.${RESET}"
 else
-  echo -e "${GREEN}Google Chrome is already installed.${RESET}"
+  # For AMD64 architecture, install Google Chrome
+  if ! which google-chrome &>/dev/null; then
+    show_progress "Installing Google Chrome for AMD64 architecture..."
+    wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - || {
+      echo -e "${YELLOW}Warning: Failed to add Google signing key. Using alternative method...${RESET}"
+      mkdir -p /etc/apt/keyrings
+      wget -q -O- https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor > /etc/apt/keyrings/google-chrome.gpg
+      echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
+    }
+    
+    if [ ! -f "/etc/apt/keyrings/google-chrome.gpg" ]; then
+      echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list
+    fi
+    
+    apt-get update || echo -e "${YELLOW}Warning: Failed to update package list after adding Google repository${RESET}"
+    apt-get install -y google-chrome-stable || {
+      echo -e "${YELLOW}Warning: Failed to install Google Chrome. Installing Chromium as fallback...${RESET}"
+      apt-get install -y chromium-browser || apt-get install -y chromium || handle_error "Failed to install any browser"
+    }
+  fi
+  
+  # Set environment variable for Chrome or Chromium
+  if which google-chrome &>/dev/null; then
+    CHROME_BIN=$(which google-chrome)
+    echo -e "${GREEN}Successfully installed Google Chrome.${RESET}"
+  else
+    CHROME_BIN=$(which chromium-browser 2>/dev/null || which chromium 2>/dev/null)
+    if [ -z "$CHROME_BIN" ]; then
+      handle_error "Could not find Chrome or Chromium binary"
+    fi
+    echo -e "${GREEN}Using Chromium as fallback.${RESET}"
+  fi
 fi
 
 # Install Persian fonts
@@ -143,24 +190,25 @@ show_progress "Updating font cache..."
 fc-cache -fv || echo -e "${YELLOW}Warning: Failed to update font cache${RESET}"
 
 # Set up environment variable
-CHROME_BIN=$(which google-chrome)
 if [ -z "$CHROME_BIN" ]; then
-  handle_error "Could not find Google Chrome binary"
+  handle_error "Could not find Chrome/Chromium binary"
 fi
 
-show_progress "Setting up CHROME_BIN environment variable..."
-echo "export CHROME_BIN=$CHROME_BIN" > /etc/profile.d/chrome-bin.sh
-chmod +x /etc/profile.d/chrome-bin.sh
+show_progress "Setting up PUPPETEER_EXECUTABLE_PATH environment variable..."
+echo "export PUPPETEER_EXECUTABLE_PATH=$CHROME_BIN" > /etc/profile.d/puppeteer-browser.sh
+echo "export CHROME_BIN=$CHROME_BIN" >> /etc/profile.d/puppeteer-browser.sh
+chmod +x /etc/profile.d/puppeteer-browser.sh
 
 # Add to .bashrc for current user if not root
 if [ -n "$SUDO_USER" ]; then
   USER_HOME=$(getent passwd $SUDO_USER | cut -d: -f6)
   if [ -f "$USER_HOME/.bashrc" ]; then
-    if ! grep -q "CHROME_BIN" "$USER_HOME/.bashrc"; then
+    if ! grep -q "PUPPETEER_EXECUTABLE_PATH" "$USER_HOME/.bashrc"; then
       echo "# Added by SuperChat Puppeteer setup" >> "$USER_HOME/.bashrc"
+      echo "export PUPPETEER_EXECUTABLE_PATH=$CHROME_BIN" >> "$USER_HOME/.bashrc"
       echo "export CHROME_BIN=$CHROME_BIN" >> "$USER_HOME/.bashrc"
       chown $SUDO_USER:$SUDO_USER "$USER_HOME/.bashrc"
-      echo -e "${GREEN}Added CHROME_BIN to $USER_HOME/.bashrc${RESET}"
+      echo -e "${GREEN}Added browser path to $USER_HOME/.bashrc${RESET}"
     fi
   fi
 fi
@@ -189,21 +237,21 @@ if [ $TOTAL_MEM -lt 4096 ] && [ $TOTAL_SWAP -lt 2048 ]; then
   fi
 fi
 
-# Verify Chrome can run in headless mode
-show_progress "Verifying Chrome headless functionality..."
+# Verify browser can run in headless mode
+show_progress "Verifying browser headless functionality..."
 if [ -n "$SUDO_USER" ]; then
   su -c "$CHROME_BIN --headless=new --disable-gpu --no-sandbox --dump-dom https://www.google.com > /dev/null 2>&1" - $SUDO_USER
-  CHROME_TEST_RESULT=$?
+  BROWSER_TEST_RESULT=$?
 else
   $CHROME_BIN --headless=new --disable-gpu --no-sandbox --dump-dom https://www.google.com > /dev/null 2>&1
-  CHROME_TEST_RESULT=$?
+  BROWSER_TEST_RESULT=$?
 fi
 
-if [ $CHROME_TEST_RESULT -eq 0 ]; then
-  echo -e "${GREEN}Chrome headless mode is working correctly.${RESET}"
+if [ $BROWSER_TEST_RESULT -eq 0 ]; then
+  echo -e "${GREEN}Browser headless mode is working correctly.${RESET}"
 else
-  echo -e "${YELLOW}Warning: Chrome headless test failed. This may affect PDF generation.${RESET}"
-  echo -e "${YELLOW}You may need to troubleshoot Chrome using the guidelines in the documentation.${RESET}"
+  echo -e "${YELLOW}Warning: Browser headless test failed. This may affect PDF generation.${RESET}"
+  echo -e "${YELLOW}You may need to troubleshoot Chrome/Chromium using the guidelines in the documentation.${RESET}"
   echo -e "${YELLOW}Continuing with setup despite this warning...${RESET}"
 fi
 
@@ -232,7 +280,7 @@ if [ ! -d "/tmp/puppeteer-test" ]; then
   mkdir -p /tmp/puppeteer-test
 fi
 
-# Create simple test script
+# Create simple test script that uses both CHROME_BIN and PUPPETEER_EXECUTABLE_PATH
 cat > /tmp/puppeteer-test/test.js << 'EOF'
 const puppeteer = require('puppeteer');
 const path = require('path');
@@ -250,10 +298,13 @@ async function test() {
     ]
   };
   
-  // Add executablePath if CHROME_BIN is set
-  if (process.env.CHROME_BIN) {
+  // Add executablePath from environment variables
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    options.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    console.log(`Using browser from PUPPETEER_EXECUTABLE_PATH: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
+  } else if (process.env.CHROME_BIN) {
     options.executablePath = process.env.CHROME_BIN;
-    console.log(`Using Chrome binary: ${process.env.CHROME_BIN}`);
+    console.log(`Using browser from CHROME_BIN: ${process.env.CHROME_BIN}`);
   }
   
   const browser = await puppeteer.launch(options);
@@ -270,7 +321,7 @@ async function test() {
   <title>Puppeteer Test</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; }
-    .persian { font-family: 'Vazirmatn', Tahoma, Arial, sans-serif; }
+    .persian { font-family: 'Vazirmatn', 'Tahoma', 'Arial', sans-serif; }
   </style>
 </head>
 <body>
@@ -299,23 +350,46 @@ EOF
 # Run test if puppeteer is installed
 if [ -d "/usr/local/lib/node_modules/puppeteer" ] || [ -d "node_modules/puppeteer" ]; then
   show_progress "Puppeteer found, running test..."
-  # Ensure CHROME_BIN is available in the environment for the test
-  CHROME_BIN=$CHROME_BIN node /tmp/puppeteer-test/test.js || {
+  # Ensure environment variables are available for the test
+  PUPPETEER_EXECUTABLE_PATH=$CHROME_BIN CHROME_BIN=$CHROME_BIN node /tmp/puppeteer-test/test.js || {
     echo -e "${YELLOW}Puppeteer test failed but we'll continue with setup.${RESET}"
     echo -e "${YELLOW}See /tmp/puppeteer-test/test.js for test details.${RESET}"
   }
 else
   echo -e "${YELLOW}Puppeteer not found globally or in current directory.${RESET}"
   echo -e "${YELLOW}Test script created at /tmp/puppeteer-test/test.js${RESET}"
-  echo -e "${YELLOW}You can run it after installing Puppeteer with: node /tmp/puppeteer-test/test.js${RESET}"
+  echo -e "${YELLOW}You can run it after installing Puppeteer with:${RESET}"
+  echo -e "${YELLOW}PUPPETEER_EXECUTABLE_PATH=$CHROME_BIN CHROME_BIN=$CHROME_BIN node /tmp/puppeteer-test/test.js${RESET}"
+fi
+
+# Update application code for ARM compatibility
+show_progress "Updating Puppeteer configuration for your system architecture..."
+if [ -f "services/pdf-service/puppeteer-pdf-service.js" ]; then
+  # Backup original file
+  cp services/pdf-service/puppeteer-pdf-service.js services/pdf-service/puppeteer-pdf-service.js.bak
+  
+  # Update file to use PUPPETEER_EXECUTABLE_PATH
+  if [ "$IS_ARM" = true ]; then
+    sed -i 's/const options = {/const options = {\n      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,/g' services/pdf-service/puppeteer-pdf-service.js
+    echo -e "${GREEN}Updated Puppeteer configuration for ARM architecture.${RESET}"
+  fi
+else
+  echo -e "${YELLOW}Could not find puppeteer-pdf-service.js file to update. You may need to manually set executablePath.${RESET}"
 fi
 
 # Summary
 echo -e "\n${BOLD}${GREEN}Setup Complete!${RESET}"
 echo -e "${BOLD}Summary:${RESET}"
-echo -e "- ${GREEN}Chrome dependencies installed (with compatibility for Ubuntu $UBUNTU_VERSION)${RESET}"
+if [ "$IS_ARM" = true ]; then
+  echo -e "- ${GREEN}Installed Chromium for ARM architecture${RESET}"
+else
+  echo -e "- ${GREEN}Installed Chrome/Chromium for AMD64 architecture${RESET}"
+fi
+echo -e "- ${GREEN}Browser dependencies installed (with compatibility for Ubuntu $UBUNTU_VERSION)${RESET}"
 echo -e "- ${GREEN}Persian fonts installed where available${RESET}"
-echo -e "- ${GREEN}CHROME_BIN environment variable set to: $CHROME_BIN${RESET}"
+echo -e "- ${GREEN}Environment variables set:${RESET}"
+echo -e "  - ${GREEN}PUPPETEER_EXECUTABLE_PATH=$CHROME_BIN${RESET}"
+echo -e "  - ${GREEN}CHROME_BIN=$CHROME_BIN${RESET}"
 echo -e "- ${GREEN}Node.js performance options configured${RESET}"
 
 if [ $TOTAL_MEM -lt 4096 ] && [ -f /swapfile ]; then
@@ -324,12 +398,20 @@ fi
 
 echo -e "\n${BOLD}Next Steps:${RESET}"
 echo -e "1. ${BLUE}Source your environment variables:${RESET} source ~/.bashrc"
-echo -e "2. ${BLUE}Restart your application to apply all changes${RESET}"
-echo -e "3. ${BLUE}If you encounter any issues, refer to the troubleshooting guide:${RESET}"
+echo -e "2. ${BLUE}Install Puppeteer with:${RESET} npm install puppeteer"
+echo -e "3. ${BLUE}When using Puppeteer, ensure it uses the system browser:${RESET}"
+echo -e "   ${BLUE}PUPPETEER_EXECUTABLE_PATH=$CHROME_BIN node your-script.js${RESET}"
+echo -e "4. ${BLUE}Restart your application to apply all changes${RESET}"
+echo -e "5. ${BLUE}If you encounter any issues, refer to the troubleshooting guide:${RESET}"
 echo -e "   ${BLUE}server/docs/ubuntu-puppeteer-guide.md${RESET}\n"
 
-echo -e "${YELLOW}Note: If you encounter any package issues specific to your Ubuntu version,${RESET}"
-echo -e "${YELLOW}you may need to manually install some packages or adapt the commands.${RESET}"
-echo -e "${YELLOW}This script is designed to work with both newer (22.04+) and older Ubuntu versions.${RESET}"
+echo -e "${YELLOW}Architecture-specific Notes:${RESET}"
+if [ "$IS_ARM" = true ]; then
+  echo -e "${YELLOW}- Running on ARM architecture: Using Chromium instead of Google Chrome${RESET}"
+  echo -e "${YELLOW}- For ARM architectures, always set the PUPPETEER_EXECUTABLE_PATH environment variable${RESET}"
+  echo -e "${YELLOW}- Some advanced features may have limited support on ARM architecture${RESET}"
+else
+  echo -e "${YELLOW}- Running on AMD64 architecture: Standard compatibility should work well${RESET}"
+fi
 
 echo -e "\n${BOLD}${BLUE}Thank you for using SuperChat!${RESET}"
