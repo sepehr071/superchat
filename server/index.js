@@ -108,10 +108,12 @@ app.post('/api/conversations/create-empty', authenticateUser, (req, res) => {
   }
 });
 
-// Import html-to-pdf-js for PDF generation (more compatible with ARM architecture)
-const fs = require('fs').promises;
+// Import utilities for PDF generation (more compatible with ARM architecture)
+// This approach replaced Puppeteer due to compatibility issues with ARM architecture
+// Requires wkhtmltopdf to be installed on the server - run install-wkhtmltopdf.sh
 const { exec } = require('child_process');
 const util = require('util');
+const fsPromises = fs.promises; // Use promise-based API from already imported fs
 const execPromise = util.promisify(exec);
 
 // PDF Export endpoint
@@ -221,7 +223,7 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
       const tempPdfPath = `/tmp/table-${uniqueFilename}.pdf`;
       
       // Write the HTML content to the temp file
-      await fs.writeFile(tempHtmlPath, htmlContent);
+      await fsPromises.writeFile(tempHtmlPath, htmlContent);
       
       console.log(`Created temporary HTML file at ${tempHtmlPath}`);
       
@@ -233,7 +235,7 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
       console.log(`PDF generated at ${tempPdfPath}`);
       
       // Read the generated PDF
-      const pdfBuffer = await fs.readFile(tempPdfPath);
+      const pdfBuffer = await fsPromises.readFile(tempPdfPath);
       console.log(`PDF Buffer read successfully - size: ${pdfBuffer.length} bytes`);
       
       // Set appropriate headers for PDF download
@@ -251,10 +253,11 @@ app.post('/api/export-table', authenticateUser, async (req, res) => {
       // Send the PDF
       res.end(pdfBuffer);
       
-      // Clean up temp files
+      // Clean up temp files after sending response
       try {
-        await fs.unlink(tempHtmlPath);
-        await fs.unlink(tempPdfPath);
+        console.log('Cleaning up temporary files');
+        await fsPromises.unlink(tempHtmlPath);
+        await fsPromises.unlink(tempPdfPath);
         console.log('Temporary files cleaned up');
       } catch (cleanupError) {
         console.error('Error cleaning up temp files:', cleanupError);
