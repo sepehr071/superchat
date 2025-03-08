@@ -1143,6 +1143,12 @@ function sendMessage() {
                   chatMessages.scrollTop = chatMessages.scrollHeight;
                 }
                 
+                // Handle auto-generated title update
+                if (data.titleUpdate) {
+                  // Update the conversation title in the UI
+                  updateConversationTitle(data.titleUpdate);
+                }
+                
                 if (data.error) {
                   // Handle error
                   assistantMessageElement.textContent = `Error: ${data.error}`;
@@ -1161,8 +1167,18 @@ function sendMessage() {
       
       return readStream();
     })
+    .then(responseData => {
+      // Check if response contains a title update for non-streaming response
+      if (responseData && responseData.titleUpdate) {
+        updateConversationTitle(responseData.titleUpdate);
+      }
+      return responseData;
+    })
     .catch(error => {
       console.error('Error in chat:', error);
+      
+      // Re-enable input and button
+      isProcessing = false;
       
       // Remove loading indicator if it exists
       if (loadingIndicator.parentNode) {
@@ -1185,4 +1201,30 @@ function sendMessage() {
       chatMessages.scrollTop = chatMessages.scrollHeight;
     });
   });
+}
+
+/**
+ * Updates the conversation title in the UI
+ * @param {string} newTitle - The new title to display
+ */
+function updateConversationTitle(newTitle) {
+  // Update page title
+  document.title = `${newTitle} - SuperChat`;
+  
+  // Find and update conversation title elements
+  const titleElement = document.querySelector('.conversation-title');
+  if (titleElement) {
+    titleElement.textContent = newTitle;
+  }
+  
+  // Find and update conversation list item if exists
+  const conversationItem = document.querySelector(`.conversation-item[data-id="${window.currentConversationId}"]`);
+  if (conversationItem) {
+    const itemTitleEl = conversationItem.querySelector('.conversation-item-title');
+    if (itemTitleEl) {
+      itemTitleEl.textContent = newTitle;
+    }
+  }
+  
+  console.log(`Conversation title updated to: ${newTitle}`);
 }
