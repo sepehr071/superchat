@@ -1,6 +1,7 @@
 const sqlite = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const { getCurrentISOTimestamp } = require('./utils/time-utils');
 
 // Ensure the data directory exists
 const dataDir = path.join(__dirname, 'data');
@@ -14,11 +15,6 @@ const db = sqlite(dbPath);
 
 // Enable foreign keys
 db.pragma('foreign_keys = ON');
-
-// Helper function to get current ISO timestamp with timezone
-function getCurrentISOTimestamp() {
-  return new Date().toISOString();
-}
 
 // Create tables if they don't exist
 function initializeDatabase() {
@@ -250,4 +246,5 @@ adminMigration.migrateUserCascadeDelete();
 module.exports = {
   db,
   getCurrentISOTimestamp
+  // Re-export from time-utils for backward compatibility
 };

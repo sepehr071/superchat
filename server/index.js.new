@@ -50,15 +50,6 @@ app.use('/api/conversations', conversationRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api/export', exportRouter);
-
-// Legacy endpoint to support existing client code
-app.post('/api/export-table', (req, res) => {
-  console.log('Legacy export-table endpoint called, forwarding to new endpoint');
-  // Forward to the new endpoint format
-  req.url = '/table';
-  exportRouter(req, res);
-});
-
 app.use('/api/admin', adminRouter);
 
 // Catch-all route to serve the main HTML file
