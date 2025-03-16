@@ -56,6 +56,7 @@ const conversationRoutes = require('./routes/conversation.routes');
 const fileRoutes = require('./routes/file.routes');
 const chatRoutes = require('./routes/chat.routes');
 const adminRoutes = require('./routes/admin.routes');
+const researchRoutes = require('./routes/research.routes');
 const { db, getCurrentISOTimestamp } = require('./config/database');
 
 // API Routes
@@ -64,6 +65,7 @@ app.use('/api/conversations', authenticateUser, conversationRoutes);
 app.use('/api/files', authenticateUser, fileRoutes);
 app.use('/api/chat', chatRoutes); // Already has authentication middleware in its router
 app.use('/api/admin', adminRoutes); // Already has authentication middleware in its router
+app.use('/api/research', researchRoutes); // Already has authentication middleware in its router
 
 // Backward compatibility for direct chat route
 app.post('/api/chat', authenticateUser, (req, res) => {

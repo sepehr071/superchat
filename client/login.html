@@ -145,7 +145,7 @@
           // User is already logged in
           return response.json().then(data => {
             // Redirect to admin dashboard if admin, otherwise regular dashboard
-            window.location.href = data.user && data.user.isAdmin ? 'admin-dashboard.html' : 'dashboard.html';
+            window.location.href = data.user && data.user.isAdmin ? 'admin-dashboard.html' : 'new-dashboard.html';
           });
         }
         // If not OK but status is 401, this is expected for not logged in users
@@ -194,7 +194,7 @@
               window.location.href = data.redirect;
             } else {
               // Fallback to dashboard
-              window.location.href = 'dashboard.html';
+              window.location.href = 'new-dashboard.html';
             }
           } else {
             // Display error message

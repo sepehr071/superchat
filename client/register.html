@@ -144,7 +144,7 @@
       .then(response => {
         if (response.ok) {
           // User is already logged in, redirect to dashboard
-          window.location.href = 'dashboard.html';
+          window.location.href = 'new-dashboard.html';
         }
         // If not OK but status is 401, this is expected for not logged in users
         // We silently ignore 401 as it's the expected state for the register page
@@ -202,7 +202,7 @@
           
           if (response.ok) {
             // Registration successful, redirect to dashboard
-            window.location.href = 'dashboard.html';
+            window.location.href = 'new-dashboard.html';
           } else {
             // Display error message
             errorMessage.textContent = data.error || 'Registration failed. Please try again.';

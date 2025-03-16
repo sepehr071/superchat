@@ -489,7 +489,7 @@
                     Research summary
                   </div>
                 </div>
-                <div class="tool-status coming-soon">Coming Soon</div>
+                <div class="tool-status available">Available</div>
               </div>
             </div>
             
@@ -660,12 +660,55 @@
             hour: '2-digit',
             minute: '2-digit'
           });
+
+          // Generate chat type badge based on type
+          let chatTypeBadge = '';
+          
+          // Add style for badges if not already present
+          if (!document.getElementById('chat-type-badge-styles')) {
+            const styleTag = document.createElement('style');
+            styleTag.id = 'chat-type-badge-styles';
+            styleTag.textContent = `
+              .chat-type-badge {
+                display: inline-flex;
+                align-items: center;
+                padding: 0.25rem 0.5rem;
+                border-radius: 12px;
+                font-size: 0.75rem;
+                font-weight: 500;
+                margin-top: 0.5rem;
+                gap: 0.25rem;
+              }
+              .chat-type-badge.normal { background-color: rgba(79, 70, 229, 0.15); color: #4f46e5; }
+              .chat-type-badge.pdf { background-color: rgba(219, 39, 119, 0.15); color: #db2777; }
+              .chat-type-badge.research { background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+            `;
+            document.head.appendChild(styleTag);
+          }
+          
+          if (conversation.type === 'pdf') {
+            chatTypeBadge = `<div class="chat-type-badge pdf">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              PDF Chat
+            </div>`;
+          } else if (conversation.type === 'research') {
+            chatTypeBadge = `<div class="chat-type-badge research">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              Research
+            </div>`;
+          } else {
+            chatTypeBadge = `<div class="chat-type-badge normal">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              Chat
+            </div>`;
+          }
           
           return `
             <div class="conversation-card" data-id="${conversation.id}">
               <div class="conversation-header">
                 <div class="conversation-title">${conversation.title}</div>
                 <div class="conversation-date">${formattedDate}</div>
+                ${chatTypeBadge}
               </div>
               <div class="conversation-body">
                 <div class="conversation-stats">
@@ -714,8 +757,14 @@
               const conversationId = card.dataset.id;
               // Determine the conversation type and redirect to appropriate page
               const conversation = conversations.find(c => c.id.toString() === conversationId);
-              if (conversation && conversation.type === 'pdf') {
-                window.location.href = `pdf-chat.html?conversation=${conversationId}`;
+              if (conversation) {
+                if (conversation.type === 'pdf') {
+                  window.location.href = `pdf-chat.html?conversation=${conversationId}`;
+                } else if (conversation.type === 'research') {
+                  window.location.href = `deep-research.html?conversation=${conversationId}`;
+                } else {
+                  window.location.href = `normal-chat.html?conversation=${conversationId}`;
+                }
               } else {
                 window.location.href = `normal-chat.html?conversation=${conversationId}`;
               }
@@ -818,11 +867,39 @@
             minute: '2-digit'
           });
           
+          // Generate chat type badge for modal view
+          let modalChatTypeBadge = '';
+          if (conversation.type === 'pdf') {
+            modalChatTypeBadge = `<div class="chat-type-badge pdf">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              PDF Chat
+            </div>`;
+          } else if (conversation.type === 'research') {
+            modalChatTypeBadge = `<div class="chat-type-badge research">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              Research
+            </div>`;
+          } else {
+            modalChatTypeBadge = `<div class="chat-type-badge normal">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              Chat
+            </div>`;
+          }
+          
           const cardHTML = `
             <div class="conversation-card" data-id="${conversation.id}" style="cursor: pointer;">
               <div class="conversation-header">
                 <div class="conversation-title">${conversation.title}</div>
                 <div class="conversation-date">${formattedDate}</div>
+                ${modalChatTypeBadge}
               </div>
               <div class="conversation-body">
                 <div class="conversation-stats">
@@ -859,8 +936,14 @@
               const conversationId = card.dataset.id;
               // Determine the conversation type and redirect to appropriate page
               const conversation = conversations.find(c => c.id.toString() === conversationId);
-              if (conversation && conversation.type === 'pdf') {
-                window.location.href = `pdf-chat.html?conversation=${conversationId}`;
+              if (conversation) {
+                if (conversation.type === 'pdf') {
+                  window.location.href = `pdf-chat.html?conversation=${conversationId}`;
+                } else if (conversation.type === 'research') {
+                  window.location.href = `deep-research.html?conversation=${conversationId}`;
+                } else {
+                  window.location.href = `normal-chat.html?conversation=${conversationId}`;
+                }
               } else {
                 window.location.href = `normal-chat.html?conversation=${conversationId}`;
               }

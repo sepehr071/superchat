@@ -10,39 +10,44 @@ document.addEventListener('DOMContentLoaded', () => {
   window.currentConversationId = null;
   window.uploadedFiles = [];
 
-  // Handle click on upload area
-  uploadArea.addEventListener('click', () => {
-    fileInput.click();
-  });
+  // Only add event listeners if elements exist (for PDF chat page)
+  if (uploadArea) {
+    // Handle click on upload area
+    uploadArea.addEventListener('click', () => {
+      fileInput.click();
+    });
 
-  // Handle file selection
-  fileInput.addEventListener('change', () => {
-    updateSelectedFilesList();
-  });
+    // Handle drag and drop
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('drag-over');
+    });
 
-  // Handle drag and drop
-  uploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadArea.classList.add('drag-over');
-  });
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('drag-over');
+    });
 
-  uploadArea.addEventListener('dragleave', () => {
-    uploadArea.classList.remove('drag-over');
-  });
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('drag-over');
+      
+      if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        updateSelectedFilesList();
+      }
+    });
+  }
 
-  uploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadArea.classList.remove('drag-over');
-    
-    if (e.dataTransfer.files.length) {
-      fileInput.files = e.dataTransfer.files;
+  // Handle file selection (works for both normal and PDF chat)
+  if (fileInput) {
+    fileInput.addEventListener('change', () => {
       updateSelectedFilesList();
-    }
-  });
+    });
+  }
 
   // Function to update the selected files list
   function updateSelectedFilesList() {
-    if (!fileInput.files.length) return;
+    if (!fileInput || !fileInput.files.length || !selectedFilesList) return;
     
     // Clear previous list
     selectedFilesList.innerHTML = '';
@@ -126,7 +131,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Update UI based on selection
     selectedFilesList.classList.remove('hidden');
-    document.getElementById('upload-button').classList.remove('hidden');
+    const uploadButton = document.getElementById('upload-button');
+    if (uploadButton) {
+      uploadButton.classList.remove('hidden');
+    }
     
     // Check if there are any valid files
     const validFiles = Array.from(fileInput.files).filter(file => {
@@ -135,18 +143,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Enable/disable upload button
-    const uploadButton = document.getElementById('upload-button');
-    if (validFiles.length === 0) {
-      uploadButton.disabled = true;
-      uploadButton.classList.add('disabled');
-    } else {
-      uploadButton.disabled = false;
-      uploadButton.classList.remove('disabled');
+    if (uploadButton) {
+      if (validFiles.length === 0) {
+        uploadButton.disabled = true;
+        uploadButton.classList.add('disabled');
+      } else {
+        uploadButton.disabled = false;
+        uploadButton.classList.remove('disabled');
+      }
     }
   }
   
   // Function to remove a file from the selection
   function removeFileAtIndex(index) {
+    if (!fileInput || !selectedFilesList) return;
+    
     const dt = new DataTransfer();
     const files = fileInput.files;
     
@@ -162,7 +173,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Hide list and button if no files
     if (fileInput.files.length === 0) {
       selectedFilesList.classList.add('hidden');
-      document.getElementById('upload-button').classList.add('hidden');
+      const uploadButton = document.getElementById('upload-button');
+      if (uploadButton) {
+        uploadButton.classList.add('hidden');
+      }
     }
   }
   
@@ -174,7 +188,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   // Upload button handler
-  document.getElementById('upload-button').addEventListener('click', handleFileUpload);
+  const uploadButton = document.getElementById('upload-button');
+  if (uploadButton) {
+    uploadButton.addEventListener('click', handleFileUpload);
+  }
   
   // Helper function to detect Persian text
   function isPersianText(text) {
@@ -185,15 +202,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Function to update the files panel in the UI with conversation files
   function updateFilesPanel(newFiles) {
     if (!newFiles || newFiles.length === 0) {
-      console.warn('No files to display in files panel');
+      // No files to display
       return;
     }
     
-    console.log('Updating files panel with new files:', newFiles);
-    
     const filesPanel = document.getElementById('conversation-files');
     if (!filesPanel) {
-      console.error('Files panel element not found');
+      // Files panel not found - might be on normal chat page without files
       return;
     }
     
@@ -309,8 +324,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const existingFileIds = Array.from(filesPanel.querySelectorAll('.file-item'))
       .map(item => item.dataset.id);
     
-    console.log('Existing file IDs in panel:', existingFileIds);
-    
     // Clear existing content
     filesPanel.innerHTML = '';
     
@@ -383,7 +396,6 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       
       filesList.appendChild(fileItem);
-      console.log('Added file to panel:', file.name);
     });
     
     // Assemble the structure
@@ -409,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Function to handle file upload
   function handleFileUpload() {
-    if (!fileInput.files.length) return;
+    if (!fileInput || !fileInput.files.length || !uploadArea) return;
     
     // Filter out invalid files
     const validFiles = Array.from(fileInput.files).filter(file => {
@@ -430,8 +442,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Show loading state
     uploadArea.innerHTML = '<div class="loading-indicator"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><p>Uploading...</p></div>';
-    selectedFilesList.classList.add('hidden');
-    document.getElementById('upload-button').classList.add('hidden');
+    
+    if (selectedFilesList) {
+      selectedFilesList.classList.add('hidden');
+    }
+    
+    const uploadButton = document.getElementById('upload-button');
+    if (uploadButton) {
+      uploadButton.classList.add('hidden');
+    }
     
     // Upload files to server
     fetch('/api/upload', {
@@ -451,39 +470,50 @@ document.addEventListener('DOMContentLoaded', () => {
       window.uploadedFiles = data.files || [];
       
       // Show chat interface
-      uploadContainer.classList.add('hidden');
-      contentContainer.classList.remove('hidden');
+      if (uploadContainer && contentContainer) {
+        uploadContainer.classList.add('hidden');
+        contentContainer.classList.remove('hidden');
+      }
       
       // Populate files panel with uploaded files
       updateFilesPanel(data.files);
       
       // Initialize chat
-      initializeChat();
-      
-      // Log success
-      console.log('Files uploaded successfully:', data.files);
+      if (typeof initializeChat === 'function') {
+        initializeChat();
+      }
     })
     .catch(error => {
       console.error('Error uploading files:', error);
-      uploadArea.innerHTML = `
-        <div class="upload-prompt">
-          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="17 8 12 3 7 8"></polyline>
-            <line x1="12" y1="3" x2="12" y2="15"></line>
-          </svg>
-          <p>Upload failed. Please try again.</p>
-          <p class="file-limit">Maximum file size: 32MB per file</p>
-        </div>
-      `;
-      selectedFilesList.classList.add('hidden');
-      document.getElementById('upload-button').classList.add('hidden');
+      
+      if (uploadArea) {
+        uploadArea.innerHTML = `
+          <div class="upload-prompt">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <p>Upload failed. Please try again.</p>
+            <p class="file-limit">Maximum file size: 32MB per file</p>
+          </div>
+        `;
+      }
+      
+      if (selectedFilesList) {
+        selectedFilesList.classList.add('hidden');
+      }
+      
+      const uploadButton = document.getElementById('upload-button');
+      if (uploadButton) {
+        uploadButton.classList.add('hidden');
+      }
     });
   }
   
   // Function to handle adding files during chat
   window.addFilesToConversation = function(conversationId) {
-    if (!fileInput.files.length) return Promise.reject('No files selected');
+    if (!fileInput || !fileInput.files.length) return Promise.reject('No files selected');
     
     // Filter out invalid files
     const validFiles = Array.from(fileInput.files).filter(file => {

@@ -144,7 +144,7 @@ exports.login = async (req, res) => {
     res.status(200).json({
       message: 'Login successful',
       user: { id: user.id, username: user.username, isAdmin: isAdmin },
-      redirect: '/dashboard.html'
+      redirect: '/new-dashboard.html'
     });
   } catch (error) {
     console.error('Login error:', error);
